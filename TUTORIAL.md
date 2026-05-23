@@ -18,7 +18,7 @@
 
 ### Node.js
 
-在 [nodejs.org](https://nodejs.dorg) 下载 **LTS 版本**（目前为 24.x），按提示安装。
+在 [nodejs.org](https://nodejs.org) 下载 **LTS 版本**（目前为 24.x），按提示安装。
 
 安装完成后，**关闭所有终端并重新打开**（不重开则读不到新安装的 node）。验证：
 
@@ -79,7 +79,7 @@ set OPENAI_API_KEY=sk-xxxxxxxx
 **在 Git Bash 中**（仅对当前会话有效）：
 
 ```bash
-export OPENAI_API_KEY=sk-xxxxxxxx
+export OPENAI_API_KEY=sk-jzBaCDbJXCEDjs2iu4oLOeCYffJ29J839fYIbA3L18BXbohx
 ```
 
 **永久设置（推荐）**："环境变量" → "编辑系统环境变量" → "环境变量" → 在用户变量中新建 `OPENAI_API_KEY`。新建完成后关闭所有终端，重新打开后生效。
@@ -116,7 +116,7 @@ env_key = "OPENAI_API_KEY"
 ### 验证连通
 
 ```cmd
-codex exec "say hello in one word"
+codex exec "say hello in one word" --skip-git-repo-check
 ```
 
 应在数秒内返回 "Hello"。
@@ -213,7 +213,7 @@ codex --sandbox workspace-write
 将以下内容**完整复制**并粘贴至输入框（右键 → 粘贴，或 `Ctrl+Shift+V`），按回车：
 
 ```
-读取 data/penguins/README.md 了解数据和分析目标。在 data/penguins/out/ 下产出 R 脚本（out/scripts/01_eda.R 等）、图（out/figs/*.png，300dpi）、analysis.md。严格按 AGENTS.md 的统计纪律，开始任何分析前先读 skills/ 里对应的 skill。数据用 palmerpenguins::penguins。
+读取 data/penguins/README.md 了解数据和分析目标。在 data/penguins/out/ 下产出 R 脚本（out/scripts/01_eda.R 等）、图（out/figs/*.png，300dpi）、analysis.md。严格按 AGENTS.md 的统计纪律，开始任何分析前先读 skills/ 里对应的 skill。数据用FIFA 23 Players。
 ```
 
 ### 同意操作
@@ -250,7 +250,7 @@ codex 将持续运行 5–10 分钟，期间执行以下工作：
 ## Step 6：检查产出
 
 ```cmd
-dir data\penguins\out
+ls data\penguins\out
 ```
 
 应可见 `scripts\`、`figs\`、`analysis.md`。
@@ -260,13 +260,13 @@ dir data\penguins\out
 **1. analysis.md**
 
 ```cmd
-type data\penguins\out\analysis.md
+cat data/penguins/out/analysis.md
 ```
 
 **2. figs/ 目录中的所有图**
 
 ```cmd
-explorer data\penguins\out\figs
+start data/penguins/out/figs
 ```
 
 将打开文件夹，逐张检查图的清晰度、标题、坐标轴等。
@@ -274,7 +274,7 @@ explorer data\penguins\out\figs
 **3. scripts/ 中的 R 代码**
 
 ```cmd
-type data\penguins\out\scripts\02_model.R
+cat data/penguins/out/scripts/02_model.R
 ```
 
 如代码使用了 `broom::tidy()`、`ggplot2`、`performance` 等推荐包，说明 skill 已发挥作用；如果代码仍依赖 `summary(fit)` 或 `plot(fit)` 这种基础形式，则说明 skill 未充分传递，应进一步细化对应 skill 文件。

@@ -38,6 +38,53 @@
 
 ---
 
+### Entry 01 — 2026-06-03 — 牟正阳
+
+**Observed**：
+Codex运行分析同位置相近能力值不同国籍对身价的影响时，Residuals versus fitted values图中出现一条不合理的明显向下倾斜的线，
+
+**Diagnosis**：
+可能存在退役球员等特殊情况，codex没有正确处理异常值
+
+**Fix decided at layer**：
+- AGENTS.md 中加入一条 invariant，强调对极端值进行处理
+
+**Why this layer**：
+让codex能正确识别特殊情况，进行改进
+
+**Change**：
+
+在 AGENTS.md invariant 8 中加上“警惕并处理极端值”。
+
+**Verified**：
+重跑同一个 prompt 后，QQ图不再出现异常偏离的线
+
+
+---
+
+### Entry 01 — 2026-06-03 — 牟正阳
+
+**Observed**：
+Codex将国籍简单分为Top 10 foootball nations和Other nations，得出的相关性不合理
+
+**Diagnosis**：
+对国籍分类太粗
+
+**Fix decided at layer**：
+- AGENTS.md 中加入一条 invariant，避免对某一标签过于简单的分类
+
+**Why this layer**：
+让codex能正确处理不同分类，得出正确结论
+
+**Change**：
+
+在 AGENTS.md invariant 9 中加上“避免变量分类过粗”。
+
+**Verified**：
+重新运行后，分类得出的结论更加准确
+
+---
+
 ## 示例 1 — 图表问题
 
 ### Entry 01 — 2026-04-25 — demo

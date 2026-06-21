@@ -8,6 +8,7 @@
 
 ---
 
+
 ## 推荐格式
 
 每一次"观察 → 定位 → 修复 → 验证"循环写一条 entry：
@@ -156,3 +157,31 @@ skill 在此处的"具体性"出现缺口：它教了 codex"该写什么样的�
 
 **Reflection**：
 本次循环依赖肉眼检查 PNG。统计 skill 的多数检查可在代码层完成（grep / lint），但仍有部分必须人工检查。因此运行结束后不应只看 `analysis.md`，还应检查全部生成产出。
+
+
+
+## Entry 03 — 2026-06-21 — 潘桂轩
+
+**Observed**：
+`performance::check_model()` 在当前环境里报错，提示找不到 `see` 包；此前 `data/MidField/out/scripts/03_diagnostics.R` 只能改用手工四联诊断图。
+
+**Diagnosis**：
+`performance` 的 `check_model.default()` 默认参数里直接调用了 `see::theme_lucid()`。这意味着 `see` 不是通过普通模型拟合路径才被用到，而是作为默认绘图主题被“提前求值”了。当前环境没有安装 `see`，所以一旦不显式传 `theme`，`check_model()` 就会卡住。
+
+**Fix decided at layer**：
+- 现有的 `skills/regression_diagnostics.md`
+
+**Why this layer**：
+这不是统计纪律本身的问题，而是一个已知工具链依赖缺失的问题。最小修复是在诊断 skill 里补上“在无 `see` 时显式传 `theme = ggplot2::theme_minimal()`”的备用路径，比修改 AGENTS.md 更合适。
+
+**Change**：
+在当前会话中验证了以下 workaround 可用：
+
+```r
+performance::check_model(fit, theme = ggplot2::theme_minimal())
+```
+
+这会绕开 `see::theme_lucid()` 的默认调用。
+
+**Verified**：
+在当前环境中对一个示例 `lm()` 模型执行上述调用，`check_model()` 成功返回，且对象类为 `check_model, see_check_model`。问题可通过显式传 `theme` 立即缓解。

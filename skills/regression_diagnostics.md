@@ -4,7 +4,7 @@
 
 ## 核心思维
 
-回归系数本身没有意义,**除非模型假设成立**。一个高 R² 的模型,如果残差严重违反假设,它的预测、显著性检验、置信区间全部不可靠。
+回归系数本身没有意义,**除非模型假设成立**。一个高 R² 的模型,如果残差严重违反假设,它的预测、显著性检验、置信区间全部不可靠。**如果你在比较不同复杂度的回归模型,请优先报告 Adjusted R²,而不是直接拿 R² 做跨模型比较。**
 
 诊断不是"做完模型再看一眼"——诊断是**模型的一部分**。没诊断 = 没模型。
 
@@ -54,7 +54,7 @@ p_coef <- tidy_coef %>%
     geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
     labs(
       title = "Regression coefficients (log value ~ age + overall + potential)",
-      subtitle = sprintf("n = %d, R² = %.3f", nobs(fit), glance_fit$r.squared),
+      subtitle = sprintf("n = %d, adj. R² = %.3f", nobs(fit), glance_fit$adj.r.squared),
       x = "Coefficient estimate (log €)",
       y = NULL
     ) +
@@ -81,7 +81,7 @@ ggsave("out/figs/fig_coef_main_model.png", p_coef,
 | 系数表 (`broom::tidy`) | 偶尔 | 简化成 3 列:term / β / 95% CI |
 | 诊断图 (`check_model`) | 通常**不**进 | poster 没空间;但你必须做完才能写结论 |
 | 关系散点 + 拟合曲线 | ✅ 经常进 | 比"系数"更直观,大众更容易看懂 |
-| R²、AIC | 在 figure 副标题里 | "R² = 0.62, n = 17,946" |
+| Adjusted R²、AIC | 在 figure 副标题里,尤其是比较多个模型时 | "adj. R² = 0.62, n = 17,946" |
 
 ## 常见陷阱
 

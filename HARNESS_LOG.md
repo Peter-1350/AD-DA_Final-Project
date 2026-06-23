@@ -185,3 +185,23 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 
 **Verified**：
 在当前环境中对一个示例 `lm()` 模型执行上述调用，`check_model()` 成功返回，且对象类为 `check_model, see_check_model`。问题可通过显式传 `theme` 立即缓解。
+
+## Entry 04 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+在 `MidField` 的渐进回归分析里，模型比较的讨论容易让人误读为用 `R²` 直接比较不同复杂度模型；同时 `skills/regression_diagnostics.md` 里原先的示例也写成了 `R²`。
+
+**Diagnosis**：
+`R²` 会随自变量数量增加而机械上升，不适合直接比较不同复杂度的回归模型。这里应该优先看 `Adjusted R²`，或者把 `R²` 只用于单个模型内部拟合度描述。
+
+**Fix decided at layer**：
+- 现有的 `skills/regression_diagnostics.md`
+
+**Why this layer**：
+这是回归诊断与模型比较规则的问题，属于统计技能层面的修正，不需要上升到 AGENTS.md 的全局纪律。
+
+**Change**：
+把 `regression_diagnostics.md` 中涉及模型比较的示例从 `R²` 改成 `Adjusted R²`，并补充说明“比较不同复杂度模型时优先报告 Adjusted R²”。
+
+**Verified**：
+`skills/regression_diagnostics.md` 已更新；`MidField` 的图和 `analysis.md` 当前没有把 `R²` 用作跨模型比较量，现有内容无需改动。

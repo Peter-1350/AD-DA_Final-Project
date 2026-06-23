@@ -1,0 +1,5 @@
+statistic,value
+normality_p,1.0780560474938646e-76
+heteroscedasticity_p,1.3059982842020387e-8
+collinearity_max_vif,3.14114312192897
+influential_points,100

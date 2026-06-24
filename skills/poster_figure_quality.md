@@ -218,3 +218,4 @@ plot(df$age, df$value)  # 没有标题、坐标轴丑、不可印刷
 - [ ] 数字格式化(千位分隔、单位前缀)?
 - [ ] `dpi = 300`,长宽适合 poster?
 - [ ] 文件名描述内容(`fig_age_value.png` 而非 `plot1.png`)?
+- [ ] 因子变量没有 NA 水平？显示的回归项都是可解释的（没有泄漏的控制变量如 age_z、total_stats_z）？

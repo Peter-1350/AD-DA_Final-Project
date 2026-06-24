@@ -90,6 +90,69 @@ ggsave("out/figs/fig_coef_main_model.png", p_coef,
 - **离群点驱动整个结果** — 拟合两次(含/不含)对比;如果结果敏感,在 poster 局限性里说明。
 - **样本量小(n < 20)谈正态性** — Shapiro-Wilk 检不出问题不代表正态,小样本本来就检不出来。
 - **log 变换后忘了在 poster 上说明** — y 轴标签必须写 `log(value)` 不是 `value`,系数解读也要改成"百分比变化"。
+- **交互模型的组别斜率只画交互偏移而不是总斜率** — 当模型有 `position * skill` 交互项时，非参照组的真实斜率 = 主效应 + 交互偏移。若只画交互项，不同组之间的系数不可比。正确做法：对每组计算 `total_slope = main_effect + interaction_offset`，并随置信区间一起传播。
+
+## 交互模型：正确计算分组边际效应
+
+当模型含分类 × 连续变量的交互项（如 `position * skill`）时，最自然的 poster 呈现方式是**每个位置各自的技能斜率图**，而不是一张列满交互项的系数表。
+
+### 错误做法：只画交互项
+
+```r
+# ❌ Attack 显示主效应斜率，其他位置只显示 Δslope——不可比
+coef_int %>% filter(str_detect(term, "position_group.*:")) %>% ...
+```
+
+### 正确做法：`emmeans::emtrends()`
+
+用一个交互模型，通过 `emtrends()` 提取每个组 × 每个连续变量的总斜率。它在内部用 `vcov()` 的全协方差矩阵做 delta method 传播，交互项和主效应之间的协方差不会被忽略。
+
+```r
+library(emmeans)
+library(purrr)
+
+# 假设你的交互模型
+fit <- lm(log_value ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z,
+          data = df)
+
+# 为每个技能提取"每个位置的总斜率 + 正确 CI"
+skill_vars <- c("pace_z", "shooting_z", "passing_z", "dribbling_z", "defending_z", "physicality_z")
+
+skill_slopes <- map_dfr(skill_vars, function(skill) {
+  emtrends(fit, ~ position_group, var = skill) %>%
+    confint() %>%                          # 输出含 lower.CL / upper.CL
+    as.data.frame() %>%
+    rename(estimate = contains("trend")) %>% # 趋势列名 = "<skill>.trend"
+    mutate(skill = skill)
+})
+```
+
+### 画成四面板森林图（poster-ready）
+
+```r
+skill_slopes %>%
+  mutate(skill = recode(skill,
+    pace_z = "Pace", shooting_z = "Shooting",
+    passing_z = "Passing", dribbling_z = "Dribbling",
+    defending_z = "Defending", physicality_z = "Physicality")) %>%
+  ggplot(aes(x = estimate, y = skill)) +
+    geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
+    geom_errorbar(aes(xmin = lower.CL, xmax = upper.CL), width = 0.15) +
+    geom_point(size = 2.5, color = "firebrick") +
+    facet_wrap(~ position_group, nrow = 1) +
+    labs(
+      title = "Skill premiums differ by position",
+      subtitle = sprintf("Total slopes from interaction model; n = %d", nobs(fit)),
+      x = "Slope on log10(value + 1)",
+      y = NULL
+    )
+ggsave("out/figs/fig_model_slopes_by_position.png", width = 14, height = 5, dpi = 300)
+```
+
+特点：
+- 每张子图都是**可直接比较的总斜率**，CI 正确
+- `facet_wrap(~ position_group, nrow = 1)` 四面板紧凑排列，适合 poster 横向布局
+- 标题 + 副标题携带统计量，观众一眼看懂
 
 ## 对 GLM 的额外要求
 

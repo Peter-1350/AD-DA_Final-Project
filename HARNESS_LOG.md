@@ -158,7 +158,7 @@ skill 在此处的"具体性"出现缺口：它教了 codex"该写什么样的�
 **Reflection**：
 本次循环依赖肉眼检查 PNG。统计 skill 的多数检查可在代码层完成（grep / lint），但仍有部分必须人工检查。因此运行结束后不应只看 `analysis.md`，还应检查全部生成产出。
 
-
+---
 
 ## Entry 03 — 2026-06-21 — 潘桂轩
 
@@ -186,6 +186,8 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 **Verified**：
 在当前环境中对一个示例 `lm()` 模型执行上述调用，`check_model()` 成功返回，且对象类为 `check_model, see_check_model`。问题可通过显式传 `theme` 立即缓解。
 
+---
+
 ## Entry 04 — 2026-06-24 — 潘桂轩
 
 **Observed**：
@@ -205,3 +207,127 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 
 **Verified**：
 `skills/regression_diagnostics.md` 已更新；`MidField` 的图和 `analysis.md` 当前没有把 `R²` 用作跨模型比较量，现有内容无需改动。
+
+---
+
+## Entry 05 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+Residuals vs Fitted 图和 Q-Q 图出现系统性的非对称模式：残差在低拟合值端明显偏离。分析已识别出 98 个零身价球员（占 0.56%）但未作处理。
+
+**Diagnosis**：
+AGENTS.md invariant #8 要求建模前检查并剔除边界值（如 0 值），但 codex 识别后未执行。`log10(value + 1)` 将零身价压缩到 `log10(1) = 0`，模型给这些球员预测正数（因其非零技能），产生系统性的大幅负残差，导致地板效应污染全部诊断图。
+
+**Fix decided at layer**：
+- AGENTS.md（全局纪律）
+
+**Why this layer**：
+Invariant #8 已存在但未说明"不执行的后果"，codex 容易跳过。补充诊断后果（残差结构系统性扭曲）能让这条纪律更可操作、更有约束力。
+
+**Change**：
+在 AGENTS.md invariant #8 末尾补充：若不剔除，边界值会压缩到变换空间的一个点，系统性地扭曲残差结构（残差 vs 拟合图出现非对称尾、Q-Q 图左尾严重偏离），使整体模型诊断不可靠。
+
+**Verified**：
+修复有效：第三轮重跑的 `02_model.R` 中加入 `filter(value_eur > 0)`，零值球员（98 人）已排除。模型 n 从 17,524 降为 17,426，adj. R² 从 0.427 提升至 0.668。`03_diagnostics.R` 已合并入 `02_model.R`。残差与 QQ 图中的系统性负残差群理论上已消除（agent 同时移除了 shooting 和 physicality 两项技能，故 R² 提升的主因是零值排除而非模型简化）。
+
+---
+
+## Entry 06 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+`fig_model_position_specific_slopes.png` 中 y 轴出现 NA 类别，使图不可解读、无法进 poster。
+
+**Diagnosis**：
+`02_model.R:105` 的 filter `str_detect(term, "_z$")` 也捕获了 `age_z` 和 `total_stats_z`。这两个变量在后面的 `case_when` 中没有映射（技能重命名仅覆盖 6 项技能），走 `TRUE ~ term` 保留下原始名称。行 147 因子化时 levels 只包含 6 项技能，`"age_z"` 和 `"total_stats_z"` 不在 levels 中 → 变为 NA。没有 QA 步骤在保存图前检查到 NA 水平。
+
+**Fix decided at layer**：
+- 现有的 `skills/poster_figure_quality.md`
+
+**Why this layer**：
+这是图表质量控制问题：图中包含了 NA 类别。`poster_figure_quality.md` 已有"最后自查清单"，但缺少对因子变量 NA 水平的检查。填补这一空缺即可。
+
+**Change**：
+在 `poster_figure_quality.md` 的"最后自查清单"中新增一项：检查图中因子变量是否有 NA 水平，以及所有显示的回归项是否可解释（无泄漏的控制变量）。
+
+**Verified**：
+本轮 agent 转而使用 `term %in% c("pace_z", "passing_z", ...)` 显式过滤，NA 泄漏途径被彻底切断。且该轮不再生成 `fig_model_position_specific_slopes.png`（该图被替换为 `fig_model_interaction_terms.png`，一个系数森林图）。NA 问题本身已不构成重复风险。<br>`poster_figure_quality.md` 的自查项已到位，未来 session 中新 agent 保存图前会被该清单拦截。
+
+---
+
+## Entry 07 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+`fig_model_position_specific_slopes.png` 中 Attack 显示的是主效应全斜率，而 Midfield/Defense/GK 显示的只是交互偏移量（Δ vs Attack）。Attack 和其他位置在同一图中呈现的是不可比的数量。
+
+**Diagnosis**：
+Codex 用 `bind_rows` 拼接了主效应行（Attack = 全斜率）和交互项行（其他位置 = 仅 Δslope）而没有将主效应加到交互偏移上。这是交互模型结果呈现的基本理解缺失——非参照组的真实斜率 = 主效应斜率 + 交互偏移量，不能只画交互项。
+
+**Fix decided at layer**：
+- 现有的 `skills/regression_diagnostics.md`
+
+**Why this layer**：
+这是关于回归交互模型结果正确计算和呈现的方法论问题，属于回归诊断技能的范畴。`regression_diagnostics.md` 已涵盖系数解读但缺少交互模型可视化指导。
+
+**Change**：
+在 `regression_diagnostics.md` 的"常见陷阱"中新增一条：交互模型的组别斜率必须计算总斜率（主效应 + 交互偏移）并传播置信区间，不能只画交互项。
+
+**Verified**：
+`regression_diagnostics.md` 的 skill 层修改已完成（新增陷阱条目）。<br>但 agent 在第三轮中**绕开了**这个问题——不再生成 `fig_model_position_specific_slopes.png`，改为 `fig_model_interaction_terms.png`（交互系数森林图），只展示交互偏移量，不涉及总斜率计算。Δslope 问题不再表面化，但"分位置技能边际效应"这个 poster 核心需求的满足方案仍为空缺。<br>→ 需要在 skill 层补充具体的计算指引（如 `emmeans::emtrends()` 或分位置模型），否则新 agent 可能仍找不到正确的实现路径。
+
+---
+
+## Entry 08 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+Agent 在第三轮中绕开了 Δslope 问题：用交互系数森林图替代了分位置斜率图。"每个位置各自的技能边际效应"这一 poster 核心需求仍无实现方案。
+
+**Diagnosis**：
+Entry 07 的修复（在"常见陷阱"中加一条）过于被动——警告条目只说了"不要做什么"，但没有说"应该怎么做"。Agent 即使读到这条陷阱，也没有可执行的代码模板可以照做，最终只能换个可视化方式回避问题。
+
+**Fix decided at layer**：
+- 现有的 `skills/regression_diagnostics.md`
+
+**Why this layer**：
+入口不变——问题属于回归交互模型的结果呈现。这次将一条被动的"陷阱警告"升级为完整的可执行小节，包含 `emmeans::emtrends()` 计算总斜率 + `facet_wrap()` 四面板森林图的完整代码。
+
+**Change**：
+在 `regression_diagnostics.md` 的"常见陷阱"之后、"对 GLM 的额外要求"之前，新增一个完整小节 **"交互模型：正确计算分组边际效应"**，包含：
+1. 错误示范（只画交互项）
+2. 正确方案：`emmeans::emtrends()` 的原理与代码
+3. 四面板森林图的完整 ggplot 模板
+4. `ggsave()` 保存为 poster-ready 格式
+
+原有的陷阱条目（第 6 条）保留不动——它是警告，新小节是解决方案，二者互补。
+
+**Verified**：
+skill 层修改已完成。下一轮 agent 在跑交互模型时读到该小节，应能直接按代码模板生成 `fig_model_slopes_by_position.png`。脚本层尚未应用（本会话不重跑）。
+
+---
+
+## Entry 09 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+第三轮 agent 将 shooting 和 physicality 从模型中完全移除（主效应和交互模型均只含 4 项技能），导致 README 核心问题"前锋更看重射门还是速度"无法回答。R² 提升至 0.668，但主因是零值排除而非技能精简。
+
+**Diagnosis**：
+README 中有三处措辞鼓励了变量丢弃：
+1. "可以先从 2-4 个最有理论意义的维度开始"——agent 理解为"选 subset 是设计意图"
+2. "如果模型复杂度允许，再扩展到全部 6 个"——给 agent 提供了不扩展的借口
+3. "如果模型太复杂，可以先只选 2-4 个核心技能进入交互模型"——在统计注意事项中再次确认了变量删除的合法性
+
+三条共同作用，使 agent 认为删除 shooting 和 physicality 是在按 README 行事。
+
+**Fix decided at layer**：
+- `data/Value_on_Position/README.md`（数据集层的需求规格）
+
+**Why this layer**：
+变量选择是研究问题定义的一部分，不是通用统计纪律。这个问题与 agent 是否读技能文件无关——它严格按照 README 的指令执行的。修 README 是唯一正确的层。
+
+**Change**：
+1. EDA 小节：将"建议优先关注"改为"分析必须覆盖全部 6 项技能，不可删除"，并补充"共线性应通过诊断和谨慎解读来处理"。
+2. 主模型小节：删除"2-4 个最有理论意义的维度 + 扩展到全部 6 个"的步进式建议，改为"固定为全部 6 项技能，不可删减"。
+3. 统计注意事项：将"可以先只选 2-4 个"替换为"不要为了降低共线性而删除技能变量"。
+4. 推荐的图表：更新图名以匹配当前实际输出。
+
+**Verified**：
+README 文本修改完成。新 agent 读此 README 后，应不会自行删除技能变量。

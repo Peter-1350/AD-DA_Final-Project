@@ -1,0 +1,5 @@
+position_group,ability_tier,n,nationalities,nationalities_ge_25,nationalities_ge_30,median_value_m,q1_value_m,q3_value_m
+Midfielder,Development (<70),4682,130,41,36,0.8,0.45,1.3
+Defender,Development (<70),4248,128,36,36,0.7,0.4,1.1
+Forward,Development (<70),2068,119,26,21,0.75,0.45,1.2
+Goalkeeper,Development (<70),1467,92,20,18,0.425,0.21,0.8

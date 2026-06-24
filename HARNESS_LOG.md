@@ -6,8 +6,7 @@
 >
 > 课程对反思报告的具体格式不作硬性要求；但所提交的反思报告应当反映：harness 在迭代过程中的演化、所观察到的 codex 统计错误、以及 skill 文件是如何修复这些错误的。
 
----
-
+***
 
 ## 推荐格式
 
@@ -37,17 +36,18 @@
 （再次运行后问题是否消失？是否引入了新问题？）
 ```
 
----
+***
 
 ### Entry 01 — 2026-06-03 — 牟正阳
 
 **Observed**：
-Codex运行分析同位置相近能力值不同国籍对身价的影响时，Residuals versus fitted values图中出现一条不合理的明显向下倾斜的线，
+Codex运行分析同位置相近能力值不同国籍对身价的影响时，Residuals versus fitted values图中出现一条不合理的明显向下倾斜的线
 
 **Diagnosis**：
-可能存在退役球员等特殊情况，codex没有正确处理异常值
+可能存在退役球员等特殊情况，codex没有正确处理异常值，导致残差图不合理
 
 **Fix decided at layer**：
+
 - AGENTS.md 中加入一条 invariant，强调对极端值进行处理
 
 **Why this layer**：
@@ -60,18 +60,18 @@ Codex运行分析同位置相近能力值不同国籍对身价的影响时，Res
 **Verified**：
 重跑同一个 prompt 后，QQ图不再出现异常偏离的线
 
-
----
+***
 
 ### Entry 01 — 2026-06-03 — 牟正阳
 
 **Observed**：
-Codex将国籍简单分为Top 10 foootball nations和Other nations，得出的相关性不合理
+Codex将国籍简单分为Top 10 foootball nations和Other nations，结论过于粗糙
 
 **Diagnosis**：
-对国籍分类太粗
+对国籍分类不合理，将大量的国籍合并为统一分类，导致得出的结论过于简单，无法体现复杂的关系
 
 **Fix decided at layer**：
+
 - AGENTS.md 中加入一条 invariant，避免对某一标签过于简单的分类
 
 **Why this layer**：
@@ -84,7 +84,7 @@ Codex将国籍简单分为Top 10 foootball nations和Other nations，得出的�
 **Verified**：
 重新运行后，分类得出的结论更加准确
 
----
+***
 
 ## 示例 1 — 图表问题
 
@@ -104,7 +104,7 @@ codex 的默认行为是"能画就行"，视觉质量远未达到海报要求。
 
 **Why this layer**：
 仅靠 AGENTS.md 中的全局纪律过于抽象，codex 无法知道具体如何执行；
-具体要求（base_size、dpi、标题需陈述 finding 等）放入对应 skill 更合适。
+具体要求（base\_size、dpi、标题需陈述 finding 等）放入对应 skill 更合适。
 
 **Change**：
 
@@ -116,7 +116,7 @@ codex 的默认行为是"能画就行"，视觉质量远未达到海报要求。
 但发现一个新问题：codex 将所有图均输出为 8×6，对分布图而言宽度不足（应为更宽的横版）。
 → 该问题在 Entry 02 中处理。
 
----
+***
 
 ## 示例 2 — 图表问题
 
@@ -158,8 +158,6 @@ skill 在此处的"具体性"出现缺口：它教了 codex"该写什么样的�
 **Reflection**：
 本次循环依赖肉眼检查 PNG。统计 skill 的多数检查可在代码层完成（grep / lint），但仍有部分必须人工检查。因此运行结束后不应只看 `analysis.md`，还应检查全部生成产出。
 
-
-
 ## Entry 03 — 2026-06-21 — 潘桂轩
 
 **Observed**：
@@ -169,6 +167,7 @@ skill 在此处的"具体性"出现缺口：它教了 codex"该写什么样的�
 `performance` 的 `check_model.default()` 默认参数里直接调用了 `see::theme_lucid()`。这意味着 `see` 不是通过普通模型拟合路径才被用到，而是作为默认绘图主题被“提前求值”了。当前环境没有安装 `see`，所以一旦不显式传 `theme`，`check_model()` 就会卡住。
 
 **Fix decided at layer**：
+
 - 现有的 `skills/regression_diagnostics.md`
 
 **Why this layer**：
@@ -195,6 +194,7 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 `R²` 会随自变量数量增加而机械上升，不适合直接比较不同复杂度的回归模型。这里应该优先看 `Adjusted R²`，或者把 `R²` 只用于单个模型内部拟合度描述。
 
 **Fix decided at layer**：
+
 - 现有的 `skills/regression_diagnostics.md`
 
 **Why this layer**：
@@ -205,3 +205,23 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 
 **Verified**：
 `skills/regression_diagnostics.md` 已更新；`MidField` 的图和 `analysis.md` 当前没有把 `R²` 用作跨模型比较量，现有内容无需改动。
+
+## Entry 07 — 2026-06-24 — [牟正阳]
+
+**Observed**：
+对身价取对数 `log(value)` 后进行 OLS 拟合，诊断图右下角 QQ 图依然显示明显的重尾，但 Codex 接受了该结果并未作处理。
+
+**Diagnosis**：
+对数转换并不能完美拉正所有极度右偏的数据，且转换回原始尺度时存在 Duan's Smearing 偏差。Codex 在面对方差随均值递增的严格正连续数据时，没有切换到广义线性模型 (GLM) 的直觉。
+
+**Fix decided at layer**：
+[x] 现有的 `skills/regression_diagnostics.md`
+
+**Why this layer**：
+这是典型的“诊断出问题后该如何补救”的范畴。原 Skill 提到了 GLM，但缺乏对连续有偏数据的处理分支。
+
+**Change**：
+扩充 `skills/regression_diagnostics.md` 中的 GLM 部分，加入：“当 `log(y)` 的 OLS 残差在两端严重偏离正态时，使用 `glm(y ~ ..., family = Gamma(link = 'log'))`，这对于建模严格正值数据更加稳健”。
+
+**Verified**：
+应用 Gamma GLM 后，`performance::check_model()` 显示残差分布得到大幅改善，重尾现象收敛。

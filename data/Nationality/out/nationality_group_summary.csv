@@ -1,0 +1,25 @@
+stratum_label,role,position_group,ability_tier,nationality,n,median_value_m,mean_value_m,q1_value_m,q3_value_m,median_age,median_potential
+Regular midfielders,main,Midfielder,Regular (70-77),England,86,4.2,5.611046511627907,2.4,7.375,25,77
+Regular midfielders,main,Midfielder,Regular (70-77),Spain,151,3.6,4.926490059602649,2.2,6.25,27,75
+Regular midfielders,main,Midfielder,Regular (70-77),France,119,3.5,4.798949579831933,2.2,5.75,26,76
+Regular midfielders,main,Midfielder,Regular (70-77),Portugal,52,3.45,5.173076923076923,2.4,5.625,25,76
+Regular midfielders,main,Midfielder,Regular (70-77),Argentina,124,3.1500000000000004,3.9415322419354837,1.7750000000000001,5,28,75
+Regular midfielders,main,Midfielder,Regular (70-77),Brazil,132,3.1,4.477840863636364,1.9,5.625,26,74
+Regular midfielders,main,Midfielder,Regular (70-77),Italy,56,3.05,4.9321428392857145,1.975,6.625,27,74
+Regular midfielders,main,Midfielder,Regular (70-77),Germany,74,2.6,4.305405405405406,1.9249999999999998,6,27,74
+Regular defenders,main,Defender,Regular (70-77),Netherlands,42,4.1,5.430357142857143,2.425,6.375,25,77
+Regular defenders,main,Defender,Regular (70-77),France,96,3.6,5.019010395833333,1.8749999999999998,6.5,27,76
+Regular defenders,main,Defender,Regular (70-77),Spain,115,3.3,4.046304347826087,1.75,5.5,28,75
+Regular defenders,main,Defender,Regular (70-77),England,96,3,4.259635416666667,1.6,5.5,26,75
+Regular defenders,main,Defender,Regular (70-77),Germany,87,2.9,3.926724114942529,2,6,27,74
+Regular defenders,main,Defender,Regular (70-77),Brazil,144,2.6500000000000004,3.5296875,1.9,4.2250000000000005,27,74
+Regular defenders,main,Defender,Regular (70-77),Italy,70,2.3499999999999996,3.3110714285714287,1.525,3.6750000000000003,27,73
+Regular defenders,main,Defender,Regular (70-77),Argentina,99,2.1,2.729292919191919,1.3,3.6,29,73
+Development midfielders,robustness,Midfielder,Development (<70),Argentina,204,1.3,1.3535049019607843,0.84375,1.8,23,71.5
+Development midfielders,robustness,Midfielder,Development (<70),Spain,203,1.1,1.2443349753694581,0.725,1.6,22,72
+Development midfielders,robustness,Midfielder,Development (<70),Italy,126,0.975,1.1188492063492064,0.55625,1.4,23.5,70
+Development midfielders,robustness,Midfielder,Development (<70),France,219,0.925,1.108904109589041,0.575,1.5,22,71
+Development midfielders,robustness,Midfielder,Development (<70),Germany,349,0.825,0.961919770773639,0.525,1.2,23,69
+Development midfielders,robustness,Midfielder,Development (<70),England,415,0.65,0.816566265060241,0.375,1.1,23,68
+Development midfielders,robustness,Midfielder,Development (<70),Republic of Ireland,153,0.35,0.5744117647058824,0.21,0.775,23,66
+Development midfielders,robustness,Midfielder,Development (<70),China PR,152,0.22,0.3068421052631579,0.12,0.4,26,61

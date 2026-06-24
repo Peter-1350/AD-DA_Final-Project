@@ -179,3 +179,27 @@ p_or <- or_table %>%
     scale_x_log10() +
     labs(x = "Odds ratio (log scale)", y = NULL)
 ```
+## 处理严格正值且右偏的连续数据
+当目标变量是金钱（Market Value, Wage）等**严格大于 0 且极度右偏**的数据时，常见的做法是 `lm(log(y) ~ X)`。
+**但 `log` 变换 OLS 有两个致命伤：**
+1. 常常无法完全消除残差两端的重尾（异方差）。
+2. Duan's Smearing 偏差：在对数尺度上算出的期望，用 `exp()` 还原回原始尺度时并不是均值，而是中位数，会导致对效应的系统性低估。
+
+**更好的解法：带有 Log 链接的 Gamma 广义线性模型。**
+
+```r
+# ❌ 传统 OLS 对数变换（如果残差 QQ 图两端依然严重翘起）
+fit_ols <- lm(log(value_eur) ~ age + overall, data = df)
+
+# ✅ Gamma GLM (Log link)
+# 注意：因变量直接用原始值 value_eur，不需要 log()
+# family = Gamma(link = "log") 会在内部处理对数关系并正确拟合方差结构
+fit_gamma <- glm(
+  value_eur ~ age + overall, 
+  data = df, 
+  family = Gamma(link = "log")
+)
+
+# 提取系数时，由于是 log link，系数的解释与 log(y) 的 OLS 完全一样（百分比变化）
+tidy_gamma <- broom::tidy(fit_gamma, exponentiate = TRUE, conf.int = TRUE) 
+# exponentiate = TRUE 会直接把系数 exp(beta) 变成乘法效应比率 (Ratio)

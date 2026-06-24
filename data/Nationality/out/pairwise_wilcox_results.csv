@@ -1,0 +1,85 @@
+stratum_label,group1,group2,p.value
+Regular midfielders,England,Argentina,0.16271980272240424
+Regular midfielders,England,Brazil,0.305050840983908
+Regular midfielders,Germany,England,0.305050840983908
+Regular midfielders,Spain,Argentina,0.305050840983908
+Regular midfielders,France,Argentina,0.49495324070441077
+Regular midfielders,Portugal,Argentina,0.49495324070441077
+Regular midfielders,Spain,Germany,0.49495324070441077
+Regular midfielders,Germany,France,0.5191244384421507
+Regular midfielders,Portugal,Germany,0.5191244384421507
+Regular midfielders,Spain,Brazil,0.5191244384421507
+Regular midfielders,France,England,0.5226318455458284
+Regular midfielders,Italy,Argentina,0.5226318455458284
+Regular midfielders,Italy,England,0.5226318455458284
+Regular midfielders,Portugal,Brazil,0.5312085911211538
+Regular midfielders,France,Brazil,0.5550209398394622
+Regular midfielders,Spain,England,0.5550209398394622
+Regular midfielders,Brazil,Argentina,0.6938154252142604
+Regular midfielders,Italy,Germany,0.6938154252142604
+Regular midfielders,Portugal,England,0.7762523730679279
+Regular midfielders,Italy,Brazil,0.7909120330540097
+Regular midfielders,Portugal,Italy,0.7909120330540097
+Regular midfielders,Spain,Italy,0.7909120330540097
+Regular midfielders,Germany,Argentina,0.8050005127221008
+Regular midfielders,Germany,Brazil,0.8050005127221008
+Regular midfielders,Italy,France,0.8050005127221008
+Regular midfielders,Portugal,France,0.8050005127221008
+Regular midfielders,Spain,France,0.8050005127221008
+Regular midfielders,Spain,Portugal,0.9465204243967552
+Regular defenders,Netherlands,Argentina,1.8768721662882804e-4
+Regular defenders,France,Argentina,4.633292108855748e-4
+Regular defenders,Germany,Argentina,9.998017006249355e-4
+Regular defenders,Spain,Argentina,0.0031807913315144336
+Regular defenders,Brazil,Argentina,0.0039370287120079
+Regular defenders,England,Argentina,0.0039370287120079
+Regular defenders,Netherlands,Italy,0.004061919782794211
+Regular defenders,Netherlands,Brazil,0.016948846739857366
+Regular defenders,Italy,France,0.026699606506338507
+Regular defenders,France,Brazil,0.08045753693279126
+Regular defenders,Italy,Germany,0.08279874487682076
+Regular defenders,Spain,Netherlands,0.13276635028083336
+Regular defenders,Netherlands,England,0.13806292378670762
+Regular defenders,Spain,Italy,0.13848900283948898
+Regular defenders,Italy,England,0.15319647341194764
+Regular defenders,Netherlands,Germany,0.1670041177374947
+Regular defenders,Italy,Argentina,0.18649259744807642
+Regular defenders,Germany,Brazil,0.25581134409315404
+Regular defenders,Italy,Brazil,0.25581134409315404
+Regular defenders,France,England,0.3148142931594348
+Regular defenders,Spain,France,0.3148142931594348
+Regular defenders,Spain,Brazil,0.411921050635053
+Regular defenders,Germany,France,0.4507615565350622
+Regular defenders,England,Brazil,0.4681031548159119
+Regular defenders,Netherlands,France,0.4681031548159119
+Regular defenders,Germany,England,0.8179271159983056
+Regular defenders,Spain,Germany,0.8222007852861792
+Regular defenders,Spain,England,0.9837361008885745
+Development midfielders,China PR,Argentina,1.9716044392156967e-46
+Development midfielders,Spain,China PR,2.1108295175427132e-45
+Development midfielders,Germany,China PR,2.059509207613517e-43
+Development midfielders,France,China PR,1.6748180195667794e-39
+Development midfielders,Italy,China PR,7.868043517653605e-33
+Development midfielders,England,China PR,5.27277968717113e-32
+Development midfielders,Republic of Ireland,Argentina,6.688612939569338e-28
+Development midfielders,Spain,Republic of Ireland,4.287076412214934e-25
+Development midfielders,England,Argentina,2.4869329214221885e-22
+Development midfielders,Republic of Ireland,France,3.1991099922076955e-18
+Development midfielders,Spain,England,1.6542516398356195e-17
+Development midfielders,Republic of Ireland,Germany,3.81989314914706e-17
+Development midfielders,Republic of Ireland,Italy,6.857888990671259e-16
+Development midfielders,Germany,Argentina,4.556520991915783e-12
+Development midfielders,Republic of Ireland,England,8.088773767133976e-9
+Development midfielders,France,England,1.858509985860767e-8
+Development midfielders,Republic of Ireland,China PR,4.5949702861583625e-8
+Development midfielders,Spain,Germany,8.178580964404372e-8
+Development midfielders,Italy,England,1.4399161513258682e-7
+Development midfielders,Germany,England,1.8178542479948428e-5
+Development midfielders,France,Argentina,8.890310939853037e-5
+Development midfielders,Italy,Argentina,0.001490944847913367
+Development midfielders,Spain,France,0.011585004717212131
+Development midfielders,Italy,Germany,0.012313348697679465
+Development midfielders,Germany,France,0.025057628787517734
+Development midfielders,Spain,Italy,0.0610670479598193
+Development midfielders,Spain,Argentina,0.0910525278938541
+Development midfielders,Italy,France,0.6843193601709749

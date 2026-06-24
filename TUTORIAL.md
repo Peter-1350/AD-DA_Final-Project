@@ -213,7 +213,7 @@ codex --sandbox workspace-write
 将以下内容**完整复制**并粘贴至输入框（右键 → 粘贴，或 `Ctrl+Shift+V`），按回车：
 
 ```
-读取 data/FIFA/README.md 了解数据和分析目标。在 data/FIFA/out/ 下产出 R 脚本（out/scripts/01_eda.R 等）、图（out/figs/*.png，300dpi）、analysis.md。严格按 AGENTS.md 的统计纪律，开始任何分析前先读 skills/ 里对应的 skill。数据用FIFA 23 Players。
+读取 data/FIFA/README.md 了解数据和分析目标。在 data/Nationality 下产出 R 脚本（out/scripts/01_eda.R 等）、图（out/figs/*.png，300dpi）、analysis.md。严格按 AGENTS.md 的统计纪律，开始任何分析前先读 skills/ 里对应的 skill。数据用FIFA 23 Players。
 ```
 
 ### 同意操作
@@ -296,7 +296,7 @@ cat data/penguins/out/scripts/02_model.R
 
 ```bash
 # Git Bash:
-rm -rf data/FIFA/out
+rm -rf data/Nationality
 
 # 或 cmd:
 rmdir /s /q data\penguins\out

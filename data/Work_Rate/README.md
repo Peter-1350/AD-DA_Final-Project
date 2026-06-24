@@ -42,6 +42,8 @@
 | Attacking Work Rate | character | 进攻工作率（Low / Medium / High，因变量1） |
 | Defensive Work Rate | character | 防守工作率（Low / Medium / High，因变量2） |
 | TotalStats | numeric | 总能力值（可用作控制变量） |
+| Stamina | integer | 体能/耐力（新增核心控制变量，解决模型全员预测 Medium 问题） |
+| Aggression | integer | 侵略性/积极性（新增核心控制变量） |
 
 ## 写给分析脚本的提示（Prompt Instructions for Codex）
 
@@ -50,3 +52,6 @@
 - **位置聚合提示（重要）**：`Best Position` 包含 10 多个细分位置（ST, CAM, CB, GK...）。直接放入模型会导致自由度爆炸。请在建模前将位置聚类为大类（如：Forward, Midfielder, Defender, Goalkeeper），并对门将（GK）的特殊性进行单独考虑或在模型中单独诊断。
 - **共线性与诊断提示**：在拟合任何逻辑回归模型（`nnet::multinom` 或 `MASS::polr`）后，**必须运行模型诊断**。特别是由于 `Height(in cm)` 和 `Weight(in kg)` 的高度相关性，必须调用 `car::vif()` 计算 VIF。如果 VIF > 5，请考虑使用身体质量指数（BMI）代替身高体重，或在分析报告中说明共线性影响。
 - **可视化图表规范**：生成的 EDA 图表和回归优势图（如 Odds Ratios 森林图）必须以高分辨率（300dpi）保存至 `figs/` 目录，并确保坐标轴标签清晰、排版美观以用于 Poster 制作。
+- **位置聚合与完美分离处理（核心）**：`Best Position` 包含 10 多个细分位置。请在建模前将位置聚类为大类（Forward, Midfielder, Defender, Goalkeeper）。**注意：由于 100% 的 Goalkeeper 的攻防投入度均为 Medium，这会导致多分类 Logistic 回归发生完美分离（Perfect Separation）进而系数崩溃。请在建立回归模型前，显式过滤掉门将数据（`filter(position_group != "Goalkeeper")`），将门将作为独立章节进行描述，不纳入回归方程。**
+- **提高模型区分度**：为了防止模型陷入“将所有球员都预测为 Medium”的惰性状态，必须将 `Stamina` 和 `Aggression` 作为核心自变量联合拟合，并在分析报告中讨论引入这两个变量后混淆矩阵的改善情况。
+- **拼图排版美化**：在使用 `patchwork` 或 `grid.arrange` 拼接 VIF 图和混淆矩阵图时，必须显式调整子图比例或缩小标题字号（如 `theme(plot.title = element_text(size = 10))`），**严禁出现任何文字重叠**。

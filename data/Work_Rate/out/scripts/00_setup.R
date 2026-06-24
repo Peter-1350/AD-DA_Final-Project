@@ -45,7 +45,9 @@ prep_workrate <- function() {
       ) %>% factor(levels = c("Forward", "Midfielder", "Defender", "Goalkeeper", "Other")),
       age_z = as.numeric(scale(Age)),
       height_z = as.numeric(scale(`Height(in cm)`)),
-      weight_z = as.numeric(scale(`Weight(in kg)`))
+      weight_z = as.numeric(scale(`Weight(in kg)`)),
+      stamina_z = as.numeric(scale(Stamina)),
+      aggression_z = as.numeric(scale(Aggression))
     )
 }
 

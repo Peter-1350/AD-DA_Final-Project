@@ -1,10 +1,18 @@
 source(file.path("data", "Work_Rate", "out", "scripts", "00_setup.R"))
 
 model_df <- workrate_df %>%
-  filter(!is.na(position_group)) %>%
+  filter(!is.na(position_group), position_group != "Goalkeeper") %>%
   mutate(
     position_group = fct_drop(position_group),
-    position_group = fct_relevel(position_group, "Forward", "Midfielder", "Defender", "Goalkeeper")
+    position_group = fct_relevel(position_group, "Forward", "Midfielder", "Defender")
+  )
+
+goalkeeper_df <- workrate_df %>%
+  filter(position_group == "Goalkeeper") %>%
+  summarise(
+    n = n(),
+    attack_medium = mean(attack_wr == "Medium", na.rm = TRUE),
+    defend_medium = mean(defend_wr == "Medium", na.rm = TRUE)
   )
 
 tidy_multinom <- function(fit, outcome_name) {
@@ -29,14 +37,14 @@ tidy_multinom <- function(fit, outcome_name) {
 }
 
 fit_attack <- multinom(
-  attack_wr ~ age_z + height_z + weight_z + position_group,
+  attack_wr ~ age_z + height_z + weight_z + stamina_z + aggression_z + position_group,
   data = model_df,
   trace = FALSE,
   MaxNWts = 2000
 )
 
 fit_defend <- multinom(
-  defend_wr ~ age_z + height_z + weight_z + position_group,
+  defend_wr ~ age_z + height_z + weight_z + stamina_z + aggression_z + position_group,
   data = model_df,
   trace = FALSE,
   MaxNWts = 2000
@@ -51,10 +59,10 @@ coef_tbl <- bind_rows(attack_tbl, defend_tbl) %>%
       age_z = "Age (z)",
       height_z = "Height (z)",
       weight_z = "Weight (z)",
+      stamina_z = "Stamina (z)",
+      aggression_z = "Aggression (z)",
       position_groupMidfielder = "Position: Midfielder",
-      position_groupDefender = "Position: Defender",
-      position_groupGoalkeeper = "Position: Goalkeeper",
-      position_groupOther = "Position: Other"
+      position_groupDefender = "Position: Defender"
     ),
     y.level = factor(y.level, levels = c("Medium", "High"))
   ) %>%
@@ -107,31 +115,33 @@ write_csv(metrics_tbl, file.path(out_dir, "model_metrics.csv"))
 
 attack_plot_tbl <- attack_tbl %>%
   mutate(
-    term = dplyr::recode(term,
+      term = dplyr::recode(term,
       age_z = "Age (z)",
       height_z = "Height (z)",
       weight_z = "Weight (z)",
+      stamina_z = "Stamina (z)",
+      aggression_z = "Aggression (z)",
       position_groupMidfielder = "Position: Midfielder",
-      position_groupDefender = "Position: Defender",
-      position_groupGoalkeeper = "Position: Goalkeeper"
+      position_groupDefender = "Position: Defender"
     ),
     term = fct_rev(fct_reorder(term, or, .fun = median))
   ) %>%
-  filter(term %in% c("Age (z)", "Height (z)", "Weight (z)", "Position: Midfielder", "Position: Defender", "Position: Goalkeeper"))
+  filter(term %in% c("Age (z)", "Height (z)", "Weight (z)", "Stamina (z)", "Aggression (z)", "Position: Midfielder", "Position: Defender"))
 
 defend_plot_tbl <- defend_tbl %>%
   mutate(
-    term = dplyr::recode(term,
+      term = dplyr::recode(term,
       age_z = "Age (z)",
       height_z = "Height (z)",
       weight_z = "Weight (z)",
+      stamina_z = "Stamina (z)",
+      aggression_z = "Aggression (z)",
       position_groupMidfielder = "Position: Midfielder",
-      position_groupDefender = "Position: Defender",
-      position_groupGoalkeeper = "Position: Goalkeeper"
+      position_groupDefender = "Position: Defender"
     ),
     term = fct_rev(fct_reorder(term, or, .fun = median))
   ) %>%
-  filter(term %in% c("Age (z)", "Height (z)", "Weight (z)", "Position: Midfielder", "Position: Defender", "Position: Goalkeeper"))
+  filter(term %in% c("Age (z)", "Height (z)", "Weight (z)", "Stamina (z)", "Aggression (z)", "Position: Midfielder", "Position: Defender"))
 
 p_attack <- ggplot(attack_plot_tbl, aes(x = or, y = term)) +
   geom_vline(xintercept = 1, linetype = "dashed", color = "grey60") +
@@ -142,7 +152,7 @@ p_attack <- ggplot(attack_plot_tbl, aes(x = or, y = term)) +
   labs(
     title = "Adjusted associations with attacking work rate",
     subtitle = sprintf(
-      "Multinomial logit; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
+      "Multinomial logit excluding goalkeepers; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
       nrow(model_df), metrics_tbl$accuracy[1], metrics_tbl$pseudo_r2[1]
     ),
     x = "Relative risk ratio [95% CI]",
@@ -164,7 +174,7 @@ p_defend <- ggplot(defend_plot_tbl, aes(x = or, y = term)) +
   labs(
     title = "Adjusted associations with defensive work rate",
     subtitle = sprintf(
-      "Multinomial logit; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
+      "Multinomial logit excluding goalkeepers; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
       nrow(model_df), metrics_tbl$accuracy[2], metrics_tbl$pseudo_r2[2]
     ),
     x = "Relative risk ratio [95% CI]",
@@ -176,3 +186,5 @@ p_defend <- ggplot(defend_plot_tbl, aes(x = or, y = term)) +
   )
 
 save_poster_fig(p_defend, file.path(fig_dir, "fig_model_defense_coefficients.png"), width = 9.5, height = 7)
+
+write_csv(goalkeeper_df, file.path(out_dir, "goalkeeper_summary.csv"))

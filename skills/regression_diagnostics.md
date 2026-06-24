@@ -203,3 +203,20 @@ fit_gamma <- glm(
 # 提取系数时，由于是 log link，系数的解释与 log(y) 的 OLS 完全一样（百分比变化）
 tidy_gamma <- broom::tidy(fit_gamma, exponentiate = TRUE, conf.int = TRUE) 
 # exponentiate = TRUE 会直接把系数 exp(beta) 变成乘法效应比率 (Ratio)
+```
+
+## 多分类逻辑回归（Multinomial Logit）的专项诊断与优化
+
+多分类逻辑回归（如 `nnet::multinom`）在处理分类因变量（如三分类 Work Rate）时，必须通过以下机制预防失效：
+
+1. **绝对分离（Perfect Separation）的自变量清洗：**
+   - **机制：** 如果某个哑变量分类（如 `position_group == "Goalkeeper"`）在因变量的某些特定水平（如 `Low` 或 `High`）中观测频数为 0（例如门将的工作率 100% 集中在 `Medium`），最大似然估计将无法收敛。这会导致该分类的系数估计彻底崩溃，在 Forest Plot 上表现为**置信区间（CI）无限拉长**。
+   - **行动：** 必须在送入模型拟合前，**显式过滤掉此类极端特征组**（如：`df %>% filter(position_group != "Goalkeeper")`），将该特异性组别作为独立章节进行基准描述，不纳入回归方程。
+
+2. **识别哑分类器（Dummy Classifier）与特征增补：**
+   - **机制：** 当因变量存在高度阶级不平衡（如 `Medium` 占比超过 70%）且基准自变量（如身高、体重）解释力不足时，模型极易陷入**全员预测为多数类**的惰性状态（混淆矩阵中仅有一列有值，High/Low 的预测召回率为 0%）。此时整体 Accuracy 虽高，但模型已完全失效。
+   - **行动：** 必须在回归模型中**追加引入强解释力的技术/心理特征变量**（如反映球员球场活跃度的 `Stamina` 体能、`Aggression` 侵略性、或 `Defending Total` 防守总评），强制激活模型对不同工作率水平的区分度。
+
+3. **拼图版面文字重叠阻断（Poster-Ready 约束）：**
+   - **机制：** 在使用 `patchwork` 或 `grid.arrange` 将 VIF 图、混淆矩阵图拼接为多面板诊断图（Diagnostic Panel）时，子图间的默认间距和字号常导致标题文字挤压重叠。
+   - **行动：** 编写绘图代码时，必须对每个子图的标题或轴文本进行字号缩放（如 `theme(plot.title = element_text(size = 10))`），或在拼图时显式使用 `plot_layout(widths = ..., heights = ...)` 或 `plot_annotation(theme = ...)` 调节外部边距，**任何带有文字重叠的拼图视作未完成交付**。

@@ -352,3 +352,26 @@ README 中有三处措辞鼓励了变量丢弃：
 
 **Verified**：
 README 文本修改完成。新 agent 读此 README 后，应不会自行删除技能变量。
+
+## Entry 10 — 2026-06-24 — 李梓禾
+**Observed**：
+在 Work_Rate 的第一跑（Baseline）分析中，多分类逻辑回归（Multinomial Logit）模型中 Position: Goalkeeper 的系数估计彻底崩溃，置信区间（95% CI）呈现无限大（横跨 $1\times 10^{-8}$ 到 $1\times 10^{13}$）；同时，模型的混淆矩阵（Confusion Matrix）显示模型将几乎所有样本都预测为了多数类（Medium），缺乏对 High 和 Low 的实质分类能力；此外，最终生成的诊断拼图存在严重的标题文字重叠。
+
+**Diagnosis**：
+完全分离（Perfect Separation）问题：热力图显示数据中 100% 的门将攻防投入度均为 Medium，在 Low 和 High 中频数为 0。多分类逻辑回归在面对这种“完全分离”的哑变量时，最大似然估计无法收敛，导致标准误和置信区间爆炸。
+哑分类器（Dummy Classifier）失效：虽然由于 Medium 基准比例高导致整体 Accuracy 看起来有 73%，但模型仅凭年龄、身高、体重无法捕捉工作率的变异，必须引入关键的技术特征（如 Stamina, Aggression）作为控制变量。
+可视化布局（Layout）缺陷：R 语言在进行多子图拼接（patchwork 或 grid.arrange）时，未对子图标题和列宽进行动态微调，导致文本重叠。
+
+**Fix decided at layer**：
+显式修改 data/Work_Rate/README.md 中的数据流洗规则新增/修改专属于分类建模的 skills/multinomial_diagnostics.md 规范
+
+**Why this layer**：
+这涉及到特定的多分类逻辑回归诊断纪律、变量筛选逻辑以及可视化绘图微调，属于统计方法与特定技能层面的显式修正。
+
+**Change**：
+在 Work_Rate 任务提示中加入硬性清洗过滤：在拟合工作率模型前，显式剔除门将数据（filter(position_group != "Goalkeeper")），将其作为特殊位置独立描述。
+在核心自变量中增补 Stamina（体能）与 Aggression（积极性）作为控制变量，以解决模型全员预测 Medium 的无能状态。
+在绘图规范中注入拼图防重叠纪律，要求使用 plot_layout() 显式控制子图间距或对子图标题进行字号缩放（element_text(size = ...)）。
+
+**Verified**：
+本地 README.md 的提示词要求已完成迭代更新；待下一步引导 Codex 进行第二跑（Iteration 2）以验证置信区间收敛性、混淆矩阵预测丰富度以及拼图美观度

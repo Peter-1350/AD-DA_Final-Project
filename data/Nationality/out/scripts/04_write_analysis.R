@@ -1,155 +1,153 @@
-source("data/Nationality/out/scripts/00_setup.R")
+source(file.path("data", "Nationality", "out", "scripts", "00_setup.R"))
 
-quality <- readr::read_csv(file.path(out_dir, "quality_summary.csv"), show_col_types = FALSE)
-missing <- readr::read_csv(file.path(out_dir, "missing_summary.csv"), show_col_types = FALSE)
-strata <- readr::read_csv(file.path(out_dir, "strata_summary.csv"), show_col_types = FALSE)
-median_ci <- readr::read_csv(file.path(out_dir, "median_bootstrap_ci.csv"), show_col_types = FALSE)
-kruskal <- readr::read_csv(file.path(out_dir, "kruskal_results.csv"), show_col_types = FALSE)
-levene <- readr::read_csv(file.path(out_dir, "test_assumption_levene.csv"), show_col_types = FALSE)
-shapiro <- readr::read_csv(file.path(out_dir, "test_assumption_shapiro.csv"), show_col_types = FALSE)
-coef_tbl <- readr::read_csv(file.path(out_dir, "gamma_coef_tbl.csv"), show_col_types = FALSE)
-vif_tbl <- readr::read_csv(file.path(out_dir, "gamma_vif_tbl.csv"), show_col_types = FALSE)
-df <- readRDS(file.path(out_dir, "clean_fifa_nationality.rds"))
-test_df <- readRDS(file.path(out_dir, "nationality_test_df.rds"))
+overview <- readr::read_csv(file.path(out_dir, "overview.csv"), show_col_types = FALSE)
+value_summary <- readr::read_csv(file.path(out_dir, "value_summary.csv"), show_col_types = FALSE)
+gamma_tests <- readr::read_csv(file.path(out_dir, "gamma_nationality_tests.csv"), show_col_types = FALSE)
+eta_tbl <- readr::read_csv(file.path(out_dir, "eta_effect_sizes.csv"), show_col_types = FALSE)
+means <- readr::read_csv(file.path(out_dir, "estimated_mean_values.csv"), show_col_types = FALSE)
+pairs_top <- readr::read_csv(file.path(out_dir, "top_pairwise_differences.csv"), show_col_types = FALSE)
+levene <- readr::read_csv(file.path(out_dir, "assumption_levene_by_cell.csv"), show_col_types = FALSE)
+normality <- readr::read_csv(file.path(out_dir, "assumption_normality_by_group.csv"), show_col_types = FALSE)
+vif <- readr::read_csv(file.path(out_dir, "full_gamma_vif.csv"), show_col_types = FALSE)
+glance_full <- readr::read_csv(file.path(out_dir, "full_gamma_glance.csv"), show_col_types = FALSE)
+coef_full <- readr::read_csv(file.path(out_dir, "full_gamma_coefficients.csv"), show_col_types = FALSE)
+outliers <- readr::read_csv(file.path(out_dir, "full_gamma_outliers.csv"), show_col_types = FALSE)
 
-qval <- function(metric) quality$value[quality$metric == metric][1]
+get_metric <- function(name) overview$value[overview$metric == name]
 
-fmt_p <- function(p) {
-  ifelse(p < 0.001, "< .001", sprintf("= %.3f", p))
-}
-
-focus_kw <- kruskal %>%
-  filter(
-    (ability_tier == "Regular (70-77)" & position_group == "Midfielder") |
-      (ability_tier == "Depth/Youth (<70)" & position_group %in% c("Defender", "Forward"))
-  ) %>%
+test_line <- gamma_tests %>%
+  left_join(eta_tbl, by = "cell") %>%
   mutate(
-    stratum = paste(ability_tier, position_group),
     line = sprintf(
-      "- %s: Kruskal-Wallis H(%d) = %.1f, p %s, epsilon-squared = %.3f.",
-      stratum, df, statistic, fmt_p(p), effsize
+      "- %s: LR chi-square(%d)=%.2f, p %s, partial eta2=%.3f.",
+      cell, as.integer(df), lr_chisq, fmt_p(p_value), partial_eta2_log_lm
     )
-  )
-
-top_medians <- median_ci %>%
-  filter(
-    (ability_tier == "Regular (70-77)" & position_group == "Midfielder") |
-      (ability_tier == "Depth/Youth (<70)" & position_group %in% c("Defender", "Forward"))
   ) %>%
-  mutate(stratum = paste(ability_tier, position_group)) %>%
-  group_by(stratum) %>%
-  arrange(desc(median_value_eur), .by_group = TRUE) %>%
-  slice_head(n = 3) %>%
-  summarise(
-    line = paste(
-      sprintf("%s (median %s, 95%% CI %s-%s)",
-              nationality, fmt_eur(median_value_eur),
-              fmt_eur(conf.low), fmt_eur(conf.high)),
-      collapse = "; "
-    ),
-    .groups = "drop"
-  )
+  pull(line)
 
-nat_coef <- coef_tbl %>%
+mean_lines <- means %>%
+  filter(cell %in% c("Defender / Rotation 70-77", "Midfield / Rotation 70-77")) %>%
+  group_by(cell) %>%
+  slice_max(mean_value_eur, n = 1, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(line = sprintf(
+    "- In %s, the highest adjusted mean was %s: EUR %s [EUR %s, EUR %s].",
+    cell, nationality, comma(round(mean_value_eur)), comma(round(ci_low_eur)), comma(round(ci_high_eur))
+  )) %>%
+  pull(line)
+
+pair_lines <- pairs_top %>%
+  arrange(cell, desc(abs(percent_difference))) %>%
+  mutate(line = sprintf(
+    "- %s: %s ratio %.2f [%.2f, %.2f], Tukey p %s (%+.1f%%).",
+    cell, contrast, ratio, lower.CL, upper.CL, fmt_p(p.value), percent_difference
+  )) %>%
+  pull(line)
+
+coef_lines <- coef_full %>%
   filter(str_detect(term, "^nationality")) %>%
   mutate(nationality = str_remove(term, "^nationality")) %>%
-  arrange(model_id, desc(abs(percent_change)))
-
-top_nat_coef <- nat_coef %>%
-  filter(model_id %in% c("regular_midfielders", "depth_defenders", "depth_forwards")) %>%
-  group_by(model_id) %>%
-  slice_max(abs(percent_change), n = 3, with_ties = FALSE) %>%
-  ungroup() %>%
-  mutate(model_label = recode(
-    model_id,
-    regular_midfielders = "Regular midfielders",
-    depth_defenders = "Depth/Youth defenders",
-    depth_forwards = "Depth/Youth forwards"
+  mutate(line = sprintf(
+    "- %s vs Spain: ratio %.3f [%.3f, %.3f], p %s (%+.1f%%).",
+    nationality, estimate, conf.low, conf.high, fmt_p(p.value), percent_change
   )) %>%
-  mutate(
-    line = sprintf(
-      "- %s: %s %+0.0f%% versus the most common nationality in that stratum (95%% CI %+0.0f%% to %+0.0f%%).",
-      model_label, nationality, percent_change, percent_low, percent_high
-    )
+  pull(line)
+
+normality_summary <- normality %>%
+  summarise(
+    n_groups = n(),
+    shapiro_sig = sum(shapiro_p_log_value < 0.05, na.rm = TRUE),
+    min_n = min(n),
+    max_n = max(n)
   )
 
-max_vif <- max(vif_tbl$VIF, na.rm = TRUE)
-zero_n <- qval("Players with value = 0")
-rows_n <- qval("Rows")
-analysis_n <- nrow(df)
-value_median <- median(df$value_eur)
-value_iqr <- quantile(df$value_eur, c(0.25, 0.75))
+levene_lines <- levene %>%
+  mutate(line = sprintf("- %s: Levene p %s.", cell, fmt_p(p.value))) %>%
+  pull(line)
+
+vif_lines <- vif %>%
+  mutate(line = sprintf("- %s: VIF %.2f.", Term, VIF)) %>%
+  pull(line)
+
+outlier_n <- sum(outliers$Outlier == 1 | outliers$Outlier_Cook == 1, na.rm = TRUE)
 
 md <- c(
   "# Analysis: FIFA 23 Players - Nationality and Market Value",
   "",
   "## TL;DR",
-  sprintf("- The usable analysis sample contains %s positive-value FIFA 23 players after excluding %s zero-value records; market value is extremely right-skewed, so analyses use log scale or Gamma log-link models.", comma(analysis_n), zero_n),
-  "- Within same position and ability tiers, nationality remains associated with market value in large Depth/Youth strata; the Regular midfielder stratum shows weaker rank-test evidence.",
-  "- Strongest rank-test evidence appears in Depth/Youth defenders (H = 360.1, p < .001, epsilon-squared = 0.249) and Depth/Youth forwards (H = 103.2, p < .001, epsilon-squared = 0.141).",
-  "- The largest model-based nationality terms are local, baseline-dependent estimates and should be presented as sample associations, not causal premiums.",
-  sprintf("- Age, potential, and total-stat covariates are large value correlates; the strongest poster claim should be about conditional association rather than nationality alone."),
+  "- FIFA 23 market value is extremely right-skewed: median EUR 1.0M, IQR EUR 0.5M-EUR 2.0M, maximum EUR 190.5M; 98 zero-value boundary observations were excluded before modeling.",
+  "- After matching broadly on best-position group and Overall tier, nationality differences were clearest among rotation-tier defenders and midfielders, not among rotation-tier forwards or starter-tier midfielders.",
+  "- In rotation-tier defenders, Brazil had the highest adjusted mean value (EUR 3.64M [EUR 3.42M, EUR 3.87M]) and was 33% above Argentina after age and potential adjustment.",
+  "- In rotation-tier midfielders, Brazil was also highest (EUR 4.31M [EUR 4.00M, EUR 4.63M]) and 25% above Argentina after age and potential adjustment.",
+  "- The pooled controlled Gamma model showed small average nationality coefficients versus Spain (about -2% to -6% for the other selected nationalities), so the poster should emphasize cell-specific heterogeneity rather than a single global nationality ranking.",
   "",
   "## Data",
-  sprintf("- Source file: `data/FIFA 23 Players.csv`; raw size = %s rows and %s columns.", comma(rows_n), qval("Columns")),
-  sprintf("- Main variables: `Value(in Euro)` as market value, `Nationality`, `Best Position`, `Overall`, `Potential`, `Age`, and `TotalStats`."),
-  sprintf("- Data quality: `Value(in Euro)` has no missing values but includes %s zero values (%.1f%%); these were excluded before log-scale analysis and Gamma modeling.", zero_n, 100 * zero_n / rows_n),
-  sprintf("- Positive market value remains skewed: median %s, IQR %s-%s.", fmt_eur(value_median), fmt_eur(value_iqr[[1]]), fmt_eur(value_iqr[[2]])),
-  "- The analysis uses specific nationalities within strata; it does not collapse nationality into broad continent or region categories.",
-  "",
-  "![](figs/fig_data_overview_counts.png)",
+  sprintf("- Source file: `data/FIFA 23 Players.csv`; raw n = %s rows and %s columns.", comma(get_metric("Rows in raw data")), comma(get_metric("Columns in raw data"))),
+  sprintf("- Model sample: n = %s after excluding %s players with `Value(in Euro) == 0`; no missing values were found in the model fields used here.", comma(get_metric("Rows retained for models")), comma(get_metric("Rows excluded for zero market value"))),
+  sprintf("- Nationality is specific country/region text with %s distinct levels in the full data. To avoid over-broad categories, the main comparisons use six concrete nationalities with adequate cell counts: Spain, Brazil, Argentina, France, England, Germany.", comma(get_metric("Distinct nationalities"))),
+  "- Position groups were derived from `Best Position`: Forward, Midfield, Defender, Goalkeeper. Ability tiers were based on `Overall`: Elite 85+, Starter 78-84, Rotation 70-77, Depth <70.",
   "",
   "![](figs/fig_eda_value_distribution.png)",
   "",
+  "![](figs/fig_eda_position_ability_cells.png)",
+  "",
   "## EDA",
-  "- Players were stratified by four broad position groups and four ability tiers based on `Overall`: Depth/Youth (<70), Regular (70-77), Starter (78-84), and Elite (85+).",
-  "- The most stable local comparisons are in the large Depth/Youth defender/forward strata; Regular midfielders are retained because the README specifically asked for same-position, same-ability local comparisons at more market-relevant ability levels.",
+  "- Value has a long right tail, so raw-value ANOVA would be a poor default. The analysis uses Gamma GLM with log link for positive market values.",
+  "- Most observations sit in the Rotation 70-77 and Depth <70 tiers. Elite cells are too sparse for stable nationality comparisons.",
+  "- Selected poster cells: Midfield/Rotation 70-77, Defender/Rotation 70-77, Forward/Rotation 70-77, and Midfield/Starter 78-84. Argentina in Midfield/Starter 78-84 had n=19 and was dropped from the model for that cell; the remaining displayed cells had n >= 20 per nationality except no dropped groups in Forward/Rotation.",
   "",
-  "![](figs/fig_strata_counts.png)",
+  "![](figs/fig_eda_value_by_nationality_cells.png)",
   "",
-  "## Main analysis",
-  "- Method choice: because value is strictly positive after filtering and heavily right-skewed, the main conditional models use Gamma GLM with log link. For unadjusted within-stratum group comparisons, normality and equal-variance assumptions were checked first; violations led to Kruskal-Wallis tests and BH-adjusted Wilcoxon pairwise tests rather than ANOVA.",
-  "- Group-comparison assumption checks: Shapiro tests on log value were frequently below .05 and Levene tests indicated unequal variance in some strata, so nonparametric rank tests are the primary group-comparison evidence.",
-  paste(focus_kw$line, collapse = "\n"),
+  "## Main Analysis",
+  "- Method: within each selected position-rating cell, fit `glm(value_eur ~ nationality + age + potential, family = Gamma(link = \"log\"))`. This compares multiplicative expected-value ratios while adjusting for age and potential within a local homogeneous cell.",
+  "- Hypothesis-test choice: because value is strictly positive after cleaning and strongly right-skewed, Gamma(log) modeling is more aligned with the money-scale question than ordinary ANOVA or rank-only Kruskal-Wallis.",
   "",
-  "![](figs/fig_regular_midfielder_value_by_nationality.png)",
+  "Cell-level likelihood-ratio tests for nationality:",
+  test_line,
   "",
-  "![](figs/fig_depth_defender_value_by_nationality.png)",
+  "Highest adjusted means in the significant cells:",
+  mean_lines,
   "",
-  "- Bootstrap median intervals show the scale of the observed gaps in euros:",
-  paste(sprintf("- %s: %s", top_medians$stratum, top_medians$line), collapse = "\n"),
+  "Largest Tukey-adjusted pairwise contrasts:",
+  pair_lines,
   "",
-  "![](figs/fig_regular_median_value_ci.png)",
+  "![](figs/fig_gamma_adjusted_means_by_cell.png)",
   "",
-  "### Gamma log-link models",
-  "- Models were fitted separately within selected homogeneous strata: Regular midfielders, Depth/Youth defenders, and Depth/Youth forwards.",
-  "- Each model predicts positive `value_eur` using `nationality + age_z + potential_z + total_stats_z`; coefficients are reported as multiplicative value ratios and converted to percentages.",
-  paste(top_nat_coef$line, collapse = "\n"),
+  "![](figs/fig_top_pairwise_nationality_contrasts.png)",
   "",
-  "![](figs/fig_gamma_nationality_coefficients_regular.png)",
+  "Pooled controlled model, included as a robustness view rather than the main story:",
+  sprintf("- Gamma(log) model n = %s; predictors: cell, nationality, age, potential, overall.", comma(glance_full$nobs)),
+  coef_lines,
   "",
-  "![](figs/fig_gamma_covariate_coefficients.png)",
+  "![](figs/fig_full_model_nationality_coefficients.png)",
   "",
-  "## Diagnostics & robustness",
-  sprintf("- All `glm()` fits have saved `performance::check_model()` diagnostic figures in `out/figs/`, satisfying the model-diagnostics requirement."),
-  sprintf("- Collinearity check: maximum VIF across fitted Gamma models is %.2f. This is acceptable for poster-scale interpretation, though `Potential` and `TotalStats` are conceptually related.", max_vif),
-  "- Zero market values were removed before modeling rather than transformed with `log(value + 1)`, because boundary piles can distort residual structure.",
-  "- The nonparametric tests and Gamma models agree on the broad pattern: nationality is associated with value within some local strata, but uncertainty remains wide for several specific nationalities.",
+  "## Diagnostics & Robustness",
+  sprintf("- Normality checks on log(value): %d of %d nationality-within-cell groups had Shapiro p < .05; group sizes ranged from %d to %d. This supports avoiding a plain normal-error ANOVA as the primary analysis.", normality_summary$shapiro_sig, normality_summary$n_groups, normality_summary$min_n, normality_summary$max_n),
+  "- Levene tests on log(value) by nationality:",
+  levene_lines,
+  "- Defender/Rotation 70-77 showed unequal log-scale variance, so the significant defender result should be read with the Gamma model and its diagnostics rather than as a classical equal-variance ANOVA result.",
+  "- Collinearity in the pooled model was acceptable but not trivial:",
+  vif_lines,
+  sprintf("- Influence check in the pooled Gamma model flagged %s observations by Cook/outlier criteria; diagnostics were saved for inspection.", comma(outlier_n)),
   "",
-  "![](figs/fig_diag_gamma_regular_midfielders.png)",
+  "Diagnostic figures saved:",
+  "- `figs/fig_diagnostics_full_gamma_model.png`",
+  "- `figs/fig_diagnostics_gamma_midfield_rotation_70_77.png`",
+  "- `figs/fig_diagnostics_gamma_defender_rotation_70_77.png`",
+  "- `figs/fig_diagnostics_gamma_forward_rotation_70_77.png`",
+  "- `figs/fig_diagnostics_gamma_midfield_starter_78_84.png`",
   "",
   "## Conclusions",
-  "- In this FIFA 23 sample, specific nationalities show visible and statistically detectable market-value differences in several same-position, same-ability local strata.",
-  "- These results are associations in a cross-sectional observational dataset. They do not show that nationality causes a player to be valued higher or lower.",
-  "- A cautious poster wording would be: \"Within selected position-ability strata, several nationalities have higher or lower observed market values after accounting for age, potential, and total stats.\"",
+  "- In this FIFA 23 sample, nationality-value associations are not uniform. The clearest adjusted gaps appear in rotation-tier defenders and midfielders, where Brazilian players have higher estimated market values than several peer nationalities after controlling for age and potential.",
+  "- The evidence is weaker in rotation-tier forwards and starter-tier midfielders; their confidence intervals overlap substantially and the nationality LR tests are not statistically strong.",
+  "- These are cross-sectional observational associations. They should not be phrased as nationality causing higher or lower value. Unobserved club context, league exposure, contract details, scouting visibility, and transfer-market liquidity could confound the comparisons.",
   "",
-  "Limitations: FIFA market value is an estimated game/database variable, not an observed transfer price. The models do not observe club negotiation context, league visibility, injury history, contract details beyond the available fields, or selection mechanisms behind who appears in the dataset.",
-  "",
-  "## Notes for the team",
-  "- The README's goal mentions \"nationality effects\", but this analysis treats them as conditional associations because there is no randomization or causal identification strategy.",
-  "- Broad nationality groupings would obscure the research question, so this analysis keeps specific nationalities and only filters for minimum sample size within strata.",
-  "- Some figure subtitles are dense because AGENTS.md requires p-values and effect sizes directly on poster-ready figures.",
-  "- The README file appears to have character-encoding damage in this environment, but the field names and intended analysis goal were still recoverable."
+  "## Notes for the Team",
+  "- Poster-ready figures are in `out/figs/` at 300 dpi. The strongest candidates are `fig_gamma_adjusted_means_by_cell.png`, `fig_top_pairwise_nationality_contrasts.png`, and `fig_eda_value_by_nationality_cells.png`.",
+  "- Do not describe this as a universal nationality premium. The pooled model shrinks average differences, while the cell-specific models show where the association is concentrated.",
+  "- The README's suggested comparison of broad nationality categories was not followed literally because AGENTS.md warns against over-coarse nationality classification. This analysis compares concrete nationalities with adequate sample sizes.",
+  "- Elite-tier cells are too small for credible nationality ranking in this dataset; avoid using star-player anecdotes as statistical evidence.",
+  "- All `glm()` calls used for conclusions have accompanying diagnostic PNGs. The diagnostic plots are work products for checking model reliability, not necessarily poster figures."
 )
 
-writeLines(md, file.path(out_dir, "analysis.md"), useBytes = TRUE)
+writeLines(md, file.path(out_dir, "analysis.md"))

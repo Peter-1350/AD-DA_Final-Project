@@ -54,10 +54,16 @@ car::leveneTest(value ~ group, data = df)
 - 各组方差齐(Levene's test)
 - 独立性
 
+不要把 `Shapiro p < .05` 或 `Levene p < .05` 当成机械开关。特别是在大样本下，轻微偏离也几乎一定会显著；要同时看 QQ 图、组内样本量、分布形状，以及你真正想比较的是**均值/期望值**、**中位数**，还是更一般的**秩次结构**。
+
 违反方差齐性时，直接降级为非参数检验（Kruskal-Wallis）并非唯一方案，因为 KW 检验在方差不齐时检验的不再单纯是位置移动。
 推荐的处理准则：
 - **异方差但数据对称性良好**：使用 Welch's ANOVA (`oneway.test(..., var.equal = FALSE)`) + Games-Howell 事后检验。
 - **异方差且数据明显右偏**：不建议做秩和检验，推荐直接构建带有适当链接函数（如 Log 链接的 Gamma 分布）的广义线性模型 (GLM)，并通过 `car::Anova(fit, test="LR")` 执行方差分析。
+- **货币/价格/工资这类严格正值且右偏的连续变量**：优先问自己是否要比较**期望值差异或乘性比值**。如果答案是"要"，优先选 Welch's ANOVA（在可接受时）或 `Gamma(link = "log")` / `lognormal` 建模，而不是默认 `kruskal.test()`。
+- **只想比较整体秩次/随机优势，且不打算把结果解释成欧元差、均值差或百分比溢价**：这时才优先 `kruskal.test()`。
+
+一个常见误区是：先把 `y` 取 `log()`，再做 `kruskal.test(log(y) ~ group)`，以为这样"修复了偏态"。这是错误直觉，因为秩检验对单调变换基本不变；`log()` 不会把 KW 变成均值检验，也不会让结果自动更贴近"价格差异"的研究问题。
 
 ### chisq.test() 的前提
 
@@ -138,6 +144,37 @@ p_pairs <- ggplot(tidy_tukey, aes(x = estimate, y = contrast)) +
   theme_minimal(base_size = 12)
 ```
 
+### 多组比较:右偏正连续变量的更稳健方案
+
+```r
+library(emmeans)
+
+# 研究问题是"不同组的期望值/价格水平是否不同?"
+# 不要因为 Levene 或 Shapiro 显著就机械退回 Kruskal-Wallis
+
+# 方案 A: 方差不齐,但仍希望比较组均值
+welch_fit <- oneway.test(value ~ group, data = df, var.equal = FALSE)
+print(broom::tidy(welch_fit))
+
+# Games-Howell 适合异方差 + 不等样本量
+gh <- rstatix::games_howell_test(df, value ~ group)
+print(gh)
+
+# 方案 B: 严格正值且明显右偏(如价格/工资/花费)
+fit_gamma <- glm(value ~ group + age + potential,
+                 data = df,
+                 family = Gamma(link = "log"))
+
+car::Anova(fit_gamma, test = "LR")
+
+emm <- emmeans::emmeans(fit_gamma, ~ group, type = "response")
+pairs_resp <- emmeans::pairs(emm, adjust = "tukey")
+
+print(broom::tidy(emm))
+print(broom::tidy(pairs_resp))
+# 这里得到的是原始尺度上的期望值/比值,解释通常比秩检验更贴近业务问题
+```
+
 ### 错误写法
 
 ```r
@@ -165,6 +202,8 @@ cat(sprintf("p < 0.05, significant"))   # 没有效应量、没有 CI、没有 n
 - **接受零假设**:p > 0.05 不等于"没差异"。可能是样本量不够。报告 power 或 CI。
 - **小样本检验非正态**:Shapiro-Wilk 在 n < 20 时几乎检不出非正态——别因为它没拒绝就说"数据正态"。
 - **t 检验比例数据**:比例(0/1)不是正态的。用逻辑回归或卡方。
+- **把前提检验当成自动路由器**:看到 `Shapiro p < .05` / `Levene p < .05` 就立刻改用 `wilcox` / `kruskal`，会把原本关于均值或金额尺度的问题错误地改写成秩问题。
+- **对 `log(y)` 做 Kruskal-Wallis 后声称"处理了偏态"**:`log()` 对秩检验几乎不改变结论；它没有把 KW 变成更适合解释价格差异的检验。
 
 ## 决策树
 
@@ -176,8 +215,8 @@ cat(sprintf("p < 0.05, significant"))   # 没有效应量、没有 CI、没有 n
 
 比较 ≥3 组连续变量?
   ├─ 正态 + 方差齐 → aov() + TukeyHSD()
-  ├─ 偏态/方差不齐但可转换 → oneway.test() + Games-Howell post-hoc
-  ├─ 极端右偏或严格正值 → 构建 GLM (如 Gamma) 并提取 emmeans 分析
+  ├─ 异方差,但仍关心组均值/期望值 → oneway.test() + Games-Howell post-hoc
+  ├─ 极端右偏或严格正值,且关心金额/比值解释 → 构建 GLM (如 Gamma) 并提取 emmeans 分析
   └─ 仅关注整体分布和秩次结构 → kruskal.test() + Dunn's post-hoc
 比较两个分类变量?
   ├─ 期望频数 ≥ 5 → chisq.test()

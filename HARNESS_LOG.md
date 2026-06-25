@@ -292,7 +292,7 @@ README 文本修改完成。新 agent 读此 README 后，应不会自行删除�
 Codex 对假设检验的前提决策树过于死板，认为“不满足方差齐性 = 只能用非参数检验”。但对于金钱等极度右偏的连续变量，Kruskal-Wallis 检验检验的是分布的随机优势，难以做直观解释。此时更好的做法是使用能够包容方差异质性的 Welch's ANOVA，或直接过渡到带有 Log 链接的 GLM 模型。
 
 **Fix decided at layer**：
-[x] 现有的 `skills/hypothesis_testing.md`
+现有的 `skills/hypothesis_testing.md`
 
 **Why this layer**：
 这是关于假设检验前置条件失败后决策分支的问题。原技能文件中的决策树没有为极度偏态+异方差的数据提供合适的参数检验出口，导致分析降级失当。
@@ -306,8 +306,7 @@ Codex 对假设检验的前提决策树过于死板，认为“不满足方差�
 技能规则已更新。后续面对异方差和强右偏数据时，Agent 能够根据新决策树选择更稳健的模型工具，不再盲目退化为秩和检验。
 
 ---
-## Entry 10 — 2026-06-24 — 李梓禾
-
+## Entry 12 — 2026-06-24 — 李梓禾
 **Observed**：
 在 Work_Rate 的第一跑分析中，多分类逻辑回归模型中 Position: Goalkeeper 的系数估计彻底崩溃，置信区间（95% CI）呈现无限大（横跨 $1\times 10^{-8}$ 到 $1\times 10^{13}$）；同时，模型的混淆矩阵显示模型将几乎所有样本都预测为了多数类（Medium），缺乏对 High 和 Low 的实质分类能力；此外，最终生成的诊断拼图存在严重的标题文字重叠。
 
@@ -330,7 +329,7 @@ Codex 对假设检验的前提决策树过于死板，认为“不满足方差�
 **Verified**：
 本地 README.md 的提示词要求已完成迭代更新；待下一步引导 Codex 进行第二跑（Iteration 2）以验证置信区间收敛性、混淆矩阵预测丰富度以及拼图美观度
 
-## Entry 11 — 2026-06-24 — 李梓禾
+## Entry 13 — 2026-06-24 — 李梓禾
 
 **Observed**：
 在引入针对多分类逻辑回归的专项诊断规则后，第二跑的数据流与模型表现发生显著改变：回归模型成功排除了门将的完全分离干扰；混淆矩阵在引入Stamina与 Aggression作为控制变量后，预测分布开始分化；但最终输出的诊断组合拼图（VIF 与混淆矩阵）中，中间子图的标题依然存在 Predictor collinearity is accepAttack/Defelck model... 的局部文字叠影。
@@ -351,6 +350,32 @@ Codex 对假设检验的前提决策树过于死板，认为“不满足方差�
 
 ---
 
+## Entry 14 — 2026-06-25 — 牟正阳
+
+**Observed**：
+检查 `Nationality` 分析时，发现 `data/Nationality/out/scripts/02_group_tests.R` 在组内比较中先对 `log_value` 做 Shapiro/Levene 检查，然后只要前提不理想，就统一走 `kruskal_test` 与 `pairwise_wilcox_test()`。这使得 README 原本更贴近身价差异的问题，被过快改写成了“秩次差异”问题。
+
+**Diagnosis**：
+ `skills/hypothesis_testing.md` 决策树仍然不够细：虽然它已经写到“异方差且明显右偏时可转向 GLM”，但还没有明确禁止两种常见误用：
+1. 把大样本下的 `Shapiro p < .05` / `Levene p < .05` 当成自动分流开关；
+2. 先对 `y` 取 `log()`，再做 `Kruskal-Wallis`，误以为这样就更适合比较价格/金额变量。
+
+对于像球员身价这样严格正值、强右偏、且研究问题本身关心欧元尺度或乘性溢价的数据，更合适的是 Welch's ANOVA或 Gamma-log GLM + `emmeans`（若要比较条件期望值/比值），而不是默认退化为秩检验。
+
+**Fix decided at layer**：
+- 现有的 `skills/hypothesis_testing.md`
+
+**Why this layer**：
+问题根源在 skill 层的方法分流不够明确
+
+**Change**：
+对 `skills/hypothesis_testing.md` 做了三类增强：
+1. 在 `aov()` 前提部分新增说明：不要把 Shapiro/Levene 的 p 值当成机械路由器，尤其是大样本场景；
+2. 新增“货币/价格/工资等严格正值右偏变量”的专门规则，明确优先考虑 Welch's ANOVA 或 Gamma-log GLM；
+3. 在“常见陷阱”和“决策树”中显式写入：`kruskal.test(log(y) ~ group)` 不能解决解释目标错位的问题，并补充 `Gamma + emmeans` 的可执行模板。
+
+**Verified**：
+修改后分析能够按逻辑改进分析方法，得到了一定提升。
 ## Entry 13 — 2026-06-24 — 潘桂轩
 
 **Observed**：

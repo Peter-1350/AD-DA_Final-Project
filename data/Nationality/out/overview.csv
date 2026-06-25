@@ -1,0 +1,7 @@
+metric,value
+Rows in raw data,17524
+Columns in raw data,89
+Rows retained for models,17426
+Rows excluded for zero market value,98
+Rows excluded for missing model fields,0
+Distinct nationalities,157

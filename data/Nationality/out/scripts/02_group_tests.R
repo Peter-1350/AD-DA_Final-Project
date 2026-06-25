@@ -1,196 +1,161 @@
-source("data/Nationality/out/scripts/00_setup.R")
-library(rstatix)
-library(car)
+source(file.path("data", "Nationality", "out", "scripts", "00_setup.R"))
 
-df <- readRDS(file.path(out_dir, "clean_fifa_nationality.rds"))
+df_model <- readRDS(file.path(out_dir, "df_model.rds"))
 
-target_strata <- df %>%
-  group_by(position_group, ability_tier) %>%
+analysis_df <- df_model %>%
+  filter(cell %in% selected_cells, nationality %in% selected_nationalities) %>%
+  group_by(cell, nationality) %>%
+  filter(n() >= 20 | cell == "Forward / Rotation 70-77") %>%
+  ungroup() %>%
+  mutate(
+    cell = factor(cell, levels = selected_cells),
+    nationality = factor(nationality, levels = selected_nationalities)
+  ) %>%
+  droplevels()
+
+assumption_tbl <- analysis_df %>%
+  group_by(cell, nationality) %>%
   summarise(
     n = n(),
-    top_nat_n = max(table(nationality)),
-    n_nat_20 = sum(table(nationality) >= 20),
+    mean_value_eur = mean(value_eur),
+    median_value_eur = median(value_eur),
+    sd_log_value = sd(log(value_eur)),
+    shapiro_p_log_value = if_else(n() >= 3 & n() <= 5000, shapiro.test(log(value_eur))$p.value, NA_real_),
     .groups = "drop"
-  ) %>%
-  filter(n >= 250, n_nat_20 >= 4) %>%
-  arrange(desc(n_nat_20), desc(n)) %>%
-  slice_head(n = 5)
+  )
 
-readr::write_csv(target_strata, file.path(out_dir, "target_strata.csv"))
-
-test_df <- target_strata %>%
-  select(position_group, ability_tier) %>%
-  inner_join(df, by = c("position_group", "ability_tier")) %>%
-  group_by(position_group, ability_tier, nationality) %>%
-  mutate(n_in_stratum_nat = n()) %>%
+levene_tbl <- analysis_df %>%
+  group_by(cell) %>%
+  group_modify(~{
+    lev <- car::leveneTest(log(value_eur) ~ nationality, data = .x)
+    broom::tidy(lev) %>% slice(1)
+  }) %>%
   ungroup() %>%
-  filter(n_in_stratum_nat >= 20) %>%
-  group_by(position_group, ability_tier) %>%
-  mutate(
-    nationality = fct_lump_n(nationality, n = 6, other_level = "Other"),
-    nationality = fct_drop(nationality)
-  ) %>%
-  ungroup() %>%
-  filter(nationality != "Other")
+  select(cell, statistic, p.value)
 
-saveRDS(test_df, file.path(out_dir, "nationality_test_df.rds"))
-
-median_boot_ci <- function(data, reps = 1000) {
-  set.seed(2301)
-  data %>%
-    group_by(position_group, ability_tier, nationality) %>%
-    summarise(
-      n = n(),
-      median_value_eur = median(value_eur),
-      mean_overall = mean(overall),
-      mean_age = mean(age),
-      ci = list(quantile(
-        replicate(reps, median(sample(value_eur, size = n(), replace = TRUE))),
-        probs = c(0.025, 0.975),
-        names = FALSE
-      )),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      conf.low = map_dbl(ci, 1),
-      conf.high = map_dbl(ci, 2)
-    ) %>%
-    select(-ci)
+fit_cell_gamma <- function(dat) {
+  glm(value_eur ~ nationality + age + potential,
+      data = dat,
+      family = Gamma(link = "log"))
 }
 
-median_ci <- median_boot_ci(test_df)
-readr::write_csv(median_ci, file.path(out_dir, "median_bootstrap_ci.csv"))
-
-assumption_shapiro <- test_df %>%
-  group_by(position_group, ability_tier, nationality) %>%
-  summarise(
-    n = n(),
-    shapiro_p_log_value = if_else(n >= 3 & n <= 5000, shapiro.test(log_value)$p.value, NA_real_),
-    .groups = "drop"
+fits <- analysis_df %>%
+  group_by(cell) %>%
+  nest() %>%
+  mutate(
+    fit = map(data, fit_cell_gamma),
+    glance = map(fit, broom::glance),
+    anova = map(fit, ~broom::tidy(car::Anova(.x, test.statistic = "LR"))),
+    eta_log = map(data, ~{
+      lm_fit <- lm(log(value_eur) ~ nationality + age + potential, data = .x)
+      effectsize::eta_squared(lm_fit, partial = TRUE) %>% as_tibble()
+    }),
+    emm = map(fit, ~emmeans::emmeans(.x, ~ nationality, type = "response")),
+    pair_summary = map(emm, ~as_tibble(summary(pairs(.x, adjust = "tukey")))),
+    pair_ci = map(emm, ~as_tibble(confint(pairs(.x, adjust = "tukey"))))
   )
 
-assumption_levene <- test_df %>%
-  group_by(position_group, ability_tier) %>%
-  group_modify(~ {
-    out <- car::leveneTest(log_value ~ nationality, data = .x)
-    tibble(
-      statistic = out[["F value"]][1],
-      p_value = out[["Pr(>F)"]][1]
-    )
-  }) %>%
-  ungroup()
+gamma_tests <- fits %>%
+  select(cell, anova) %>%
+  unnest(anova) %>%
+  filter(term == "nationality") %>%
+  transmute(cell, lr_chisq = statistic, df = df, p_value = p.value)
 
-kruskal_results <- test_df %>%
-  group_by(position_group, ability_tier) %>%
-  kruskal_test(log_value ~ nationality) %>%
-  ungroup() %>%
-  left_join(
-    test_df %>%
-      group_by(position_group, ability_tier) %>%
-      kruskal_effsize(log_value ~ nationality, ci = TRUE) %>%
-      ungroup(),
-    by = c("position_group", "ability_tier")
-  )
+gamma_glance <- fits %>%
+  transmute(cell, glance = map(glance, as_tibble)) %>%
+  unnest(glance)
 
-pairwise_wilcox <- test_df %>%
-  group_by(position_group, ability_tier) %>%
-  pairwise_wilcox_test(log_value ~ nationality, p.adjust.method = "BH") %>%
-  ungroup()
+eta_tbl <- fits %>%
+  select(cell, eta_log) %>%
+  unnest(eta_log) %>%
+  filter(Parameter == "nationality") %>%
+  transmute(cell, partial_eta2_log_lm = Eta2_partial, eta2_ci_low = CI_low, eta2_ci_high = CI_high)
 
-readr::write_csv(assumption_shapiro, file.path(out_dir, "test_assumption_shapiro.csv"))
-readr::write_csv(assumption_levene, file.path(out_dir, "test_assumption_levene.csv"))
-readr::write_csv(kruskal_results, file.path(out_dir, "kruskal_results.csv"))
-readr::write_csv(pairwise_wilcox, file.path(out_dir, "pairwise_wilcox_results.csv"))
+emm_tbl <- fits %>%
+  select(cell, emm) %>%
+  mutate(emm = map(emm, ~as_tibble(summary(.x)))) %>%
+  unnest(emm) %>%
+  rename(mean_value_eur = response, se_eur = SE, ci_low_eur = lower.CL, ci_high_eur = upper.CL)
 
-regular_mid <- test_df %>%
-  filter(position_group == "Midfielder", ability_tier == "Regular (70-77)") %>%
-  mutate(nationality = fct_reorder(nationality, value_eur, .fun = median))
-
-kw_mid <- kruskal_results %>%
-  filter(position_group == "Midfielder", ability_tier == "Regular (70-77)")
-
-p_mid <- ggplot(regular_mid, aes(x = nationality, y = value_eur, fill = nationality)) +
-  geom_violin(alpha = 0.42, trim = FALSE, show.legend = FALSE) +
-  geom_boxplot(width = 0.16, outlier.alpha = 0.35, fill = "white", show.legend = FALSE) +
-  scale_y_log10(labels = fmt_eur) +
-  scale_fill_viridis_d(option = "D", end = 0.82) +
-  labs(
-    title = "Regular midfielders show nationality gaps",
-    subtitle = sprintf("Kruskal-Wallis H = %.1f, p = %.3g, epsilon2 = %.3f",
-                       kw_mid$statistic, kw_mid$p, kw_mid$effsize),
-    x = "Nationality",
-    y = "Market value (EUR, log scale)",
-    caption = "Same position and ability tier; observational association, not causation."
-  ) +
-  theme_poster() +
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))
-
-save_poster_fig(
-  p_mid,
-  file.path(fig_dir, "fig_regular_midfielder_value_by_nationality.png"),
-  width = 9,
-  height = 6
-)
-
-depth_def <- test_df %>%
-  filter(position_group == "Defender", ability_tier == "Depth/Youth (<70)") %>%
-  mutate(nationality = fct_reorder(nationality, value_eur, .fun = median))
-
-kw_def <- kruskal_results %>%
-  filter(position_group == "Defender", ability_tier == "Depth/Youth (<70)")
-
-p_def <- ggplot(depth_def, aes(x = nationality, y = value_eur, fill = nationality)) +
-  geom_violin(alpha = 0.42, trim = FALSE, show.legend = FALSE) +
-  geom_boxplot(width = 0.16, outlier.alpha = 0.35, fill = "white", show.legend = FALSE) +
-  scale_y_log10(labels = fmt_eur) +
-  scale_fill_viridis_d(option = "D", end = 0.82) +
-  labs(
-    title = "Depth defenders show nationality gaps",
-    subtitle = sprintf("Kruskal-Wallis H = %.1f, p = %.3g, epsilon2 = %.3f",
-                       kw_def$statistic, kw_def$p, kw_def$effsize),
-    x = "Nationality",
-    y = "Market value (EUR, log scale)",
-    caption = "Same position and ability tier; observational association, not causation."
-  ) +
-  theme_poster() +
-  theme(axis.text.x = element_text(angle = 25, hjust = 1))
-
-save_poster_fig(
-  p_def,
-  file.path(fig_dir, "fig_depth_defender_value_by_nationality.png"),
-  width = 9,
-  height = 6
-)
-
-median_focus <- median_ci %>%
-  filter(
-    (ability_tier == "Regular (70-77)" & position_group == "Midfielder") |
-      (ability_tier == "Depth/Youth (<70)" & position_group %in% c("Defender", "Forward"))
+pair_tbl <- fits %>%
+  transmute(
+    cell,
+    pairs = map2(pair_summary, pair_ci, ~left_join(.x, .y, by = c("contrast", "ratio", "SE", "df")))
   ) %>%
-  mutate(stratum_label = paste(ability_tier, position_group)) %>%
-  group_by(position_group) %>%
-  mutate(nationality = fct_reorder(nationality, median_value_eur)) %>%
-  ungroup()
+  unnest(pairs) %>%
+  separate(contrast, into = c("nationality_1", "nationality_2"), sep = " / ", remove = FALSE) %>%
+  mutate(
+    percent_difference = (ratio - 1) * 100,
+    ci_low_percent = (lower.CL - 1) * 100,
+    ci_high_percent = (upper.CL - 1) * 100
+  )
 
-p_median <- ggplot(median_focus, aes(x = median_value_eur, y = nationality, color = stratum_label)) +
-  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), width = 0.18, linewidth = 0.8) +
-  geom_point(size = 3.2) +
-  facet_wrap(~ stratum_label, scales = "free_y") +
-  scale_x_log10(labels = fmt_eur) +
-  scale_color_viridis_d(option = "D", end = 0.78) +
+readr::write_csv(analysis_df, file.path(out_dir, "analysis_model_sample.csv"))
+readr::write_csv(assumption_tbl, file.path(out_dir, "assumption_normality_by_group.csv"))
+readr::write_csv(levene_tbl, file.path(out_dir, "assumption_levene_by_cell.csv"))
+readr::write_csv(gamma_tests, file.path(out_dir, "gamma_nationality_tests.csv"))
+readr::write_csv(gamma_glance, file.path(out_dir, "gamma_model_glance.csv"))
+readr::write_csv(eta_tbl, file.path(out_dir, "eta_effect_sizes.csv"))
+readr::write_csv(emm_tbl, file.path(out_dir, "estimated_mean_values.csv"))
+readr::write_csv(pair_tbl, file.path(out_dir, "pairwise_nationality_ratios.csv"))
+
+plot_means <- emm_tbl %>%
+  mutate(
+    nationality = factor(nationality, levels = selected_nationalities),
+    cell = factor(cell, levels = selected_cells)
+  ) %>%
+  left_join(gamma_tests, by = "cell") %>%
+  left_join(eta_tbl, by = "cell") %>%
+  mutate(test_label = sprintf("LR p %s; partial eta2=%.3f", fmt_p(p_value), partial_eta2_log_lm))
+
+p_means <- plot_means %>%
+  ggplot(aes(x = mean_value_eur, y = fct_rev(nationality), color = nationality)) +
+  geom_errorbar(aes(xmin = ci_low_eur, xmax = ci_high_eur), width = 0.18, linewidth = 0.7) +
+  geom_point(size = 2.8) +
+  facet_wrap(~ paste(cell, test_label, sep = "\n"), scales = "free_x", ncol = 2) +
+  scale_x_log10(labels = label_dollar(prefix = "EUR ", scale_cut = cut_short_scale())) +
+  scale_color_viridis_d(option = "C", end = 0.9) +
   labs(
-    title = "Median value CIs separate several nationalities",
-    subtitle = "Bootstrap 95% CIs within selected position-ability strata",
-    x = "Median market value (EUR, log scale)",
+    title = "Nationality gaps remain within matched cells",
+    subtitle = "Gamma(log) models adjust for age and potential; points are estimated means",
+    x = "Estimated market value (EUR, log scale)",
     y = NULL,
-    color = "Position"
+    caption = "95% confidence intervals shown. Observational associations, not causal estimates."
   ) +
-  theme_poster() +
+  theme_poster(base_size = 14) +
   theme(legend.position = "none")
+save_poster_fig(p_means, "fig_gamma_adjusted_means_by_cell.png", width = 12, height = 8)
 
-save_poster_fig(
-  p_median,
-  file.path(fig_dir, "fig_regular_median_value_ci.png"),
-  width = 10,
-  height = 6
-)
+top_pairs <- pair_tbl %>%
+  filter(!is.na(p.value), p.value < 0.05) %>%
+  mutate(abs_pct = abs(percent_difference)) %>%
+  group_by(cell) %>%
+  slice_max(abs_pct, n = 4, with_ties = FALSE) %>%
+  ungroup() %>%
+  mutate(
+    contrast_label = paste(nationality_1, "vs", nationality_2),
+    cell = factor(cell, levels = selected_cells)
+  )
+
+readr::write_csv(top_pairs, file.path(out_dir, "top_pairwise_differences.csv"))
+
+p_pairs <- top_pairs %>%
+  ggplot(aes(x = percent_difference, y = reorder(contrast_label, percent_difference))) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_errorbar(aes(xmin = ci_low_percent, xmax = ci_high_percent), width = 0.18, color = "grey35") +
+  geom_point(aes(color = cell), size = 2.8) +
+  facet_wrap(~ cell, scales = "free_y", ncol = 2) +
+  scale_x_continuous(labels = label_percent(scale = 1)) +
+  scale_color_viridis_d(option = "D", end = 0.85) +
+  labs(
+    title = "Largest adjusted nationality contrasts",
+    subtitle = "Tukey-adjusted pairwise ratios from Gamma(log) models",
+    x = "Estimated value ratio minus 1",
+    y = NULL,
+    caption = "Positive values mean the first nationality has the higher adjusted mean."
+  ) +
+  theme_poster(base_size = 14) +
+  theme(legend.position = "none")
+save_poster_fig(p_pairs, "fig_top_pairwise_nationality_contrasts.png", width = 12, height = 8)
+
+saveRDS(fits, file.path(out_dir, "cell_gamma_fits.rds"))

@@ -1,0 +1,17 @@
+position_group,ability_tier,n
+Forward,Elite 85+,22
+Forward,Starter 78-84,133
+Forward,Rotation 70-77,746
+Forward,Depth <70,2068
+Midfield,Elite 85+,36
+Midfield,Starter 78-84,302
+Midfield,Rotation 70-77,1604
+Midfield,Depth <70,4682
+Defender,Elite 85+,17
+Defender,Starter 78-84,234
+Defender,Rotation 70-77,1388
+Defender,Depth <70,4248
+Goalkeeper,Elite 85+,16
+Goalkeeper,Starter 78-84,87
+Goalkeeper,Rotation 70-77,376
+Goalkeeper,Depth <70,1467

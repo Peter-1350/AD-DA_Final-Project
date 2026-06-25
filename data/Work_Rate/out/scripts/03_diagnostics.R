@@ -102,8 +102,11 @@ plot_cm <- function(dat, ttl) {
     geom_tile(color = "white") +
     geom_text(aes(label = percent(share, accuracy = 0.1)), size = 4) +
     scale_fill_viridis_c(option = "B", labels = percent_format(accuracy = 1)) +
-    labs(title = ttl, x = "Predicted class", y = "Observed class", fill = "Share") +
-    theme(plot.title = element_text(face = "bold"), axis.text.x = element_text(angle = 25, hjust = 1))
+    labs(title = NULL, x = "Predicted class", y = "Observed class", fill = "Share") +
+    theme(
+      axis.text.x = element_text(angle = 25, hjust = 1),
+      plot.title = element_text(face = "bold")
+    )
 }
 
 p_cm_attack <- plot_cm(filter(cm_tbl, outcome == "Attacking work rate"), "Attack model confusion matrix")
@@ -114,9 +117,10 @@ p_diag <- (p_vif | p_cm_attack | p_cm_defend) +
   plot_annotation(
     title = "Model checks and in-sample classification fit",
     subtitle = sprintf(
-      "Attack accuracy = %.3f, defense accuracy = %.3f; null = %.3f and %.3f",
+      "A: collinearity check | B: attack confusion matrix | C: defense confusion matrix\nAttack accuracy = %.3f, defense accuracy = %.3f; null = %.3f and %.3f",
       diag_metrics$accuracy[1], diag_metrics$accuracy[2], diag_metrics$null_accuracy[1], diag_metrics$null_accuracy[2]
-    )
+    ),
+    tag_levels = "A"
   )
 
 save_poster_fig(p_diag, file.path(fig_dir, "fig_model_diagnostics.png"), width = 13.5, height = 5.8)

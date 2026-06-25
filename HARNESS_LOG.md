@@ -306,3 +306,44 @@ Codex 对假设检验的前提决策树过于死板，认为“不满足方差�
 技能规则已更新。后续面对异方差和强右偏数据时，Agent 能够根据新决策树选择更稳健的模型工具，不再盲目退化为秩和检验。
 
 ---
+## Entry 10 — 2026-06-24 — 李梓禾
+**Observed**：
+在 Work_Rate 的第一跑分析中，多分类逻辑回归模型中 Position: Goalkeeper 的系数估计彻底崩溃，置信区间（95% CI）呈现无限大（横跨 $1\times 10^{-8}$ 到 $1\times 10^{13}$）；同时，模型的混淆矩阵显示模型将几乎所有样本都预测为了多数类（Medium），缺乏对 High 和 Low 的实质分类能力；此外，最终生成的诊断拼图存在严重的标题文字重叠。
+
+**Diagnosis**：
+完全分离问题：热力图显示数据中 100% 的门将攻防投入度均为 Medium，在 Low 和 High 中频数为 0。多分类逻辑回归在面对这种“完全分离”的哑变量时，最大似然估计无法收敛，导致标准误和置信区间爆炸。
+哑分类器失效：虽然由于 Medium 基准比例高导致整体 Accuracy 看起来有 73%，但模型仅凭年龄、身高、体重无法捕捉工作率的变异，必须引入关键的技术特征（如 Stamina, Aggression）作为控制变量。
+可视化布局缺陷：R 语言在进行多子图拼接（patchwork 或 grid.arrange）时，未对子图标题和列宽进行动态微调，导致文本重叠。
+
+**Fix decided at layer**：
+显式修改 data/Work_Rate/README.md 中的数据流洗规则新增/修改专属于分类建模的 skills/multinomial_diagnostics.md 规范
+
+**Why this layer**：
+这涉及到特定的多分类逻辑回归诊断纪律、变量筛选逻辑以及可视化绘图微调，属于统计方法与特定技能层面的显式修正。
+
+**Change**：
+在 Work_Rate 任务提示中加入硬性清洗过滤：在拟合工作率模型前，显式剔除门将数据（filter(position_group != "Goalkeeper")），将其作为特殊位置独立描述。
+在核心自变量中增补 Stamina 与 Aggression 作为控制变量，以解决模型全员预测 Medium 的无能状态。
+在绘图规范中注入拼图防重叠纪律，要求使用 plot_layout() 显式控制子图间距或对子图标题进行字号缩放（element_text(size = ...)）。
+
+**Verified**：
+本地 README.md 的提示词要求已完成迭代更新；待下一步引导 Codex 进行第二跑（Iteration 2）以验证置信区间收敛性、混淆矩阵预测丰富度以及拼图美观度
+
+## Entry 11 — 2026-06-24 — 李梓禾
+
+**Observed**：
+在引入针对多分类逻辑回归的专项诊断规则后，第二跑的数据流与模型表现发生显著改变：回归模型成功排除了门将的完全分离干扰；混淆矩阵在引入Stamina与 Aggression作为控制变量后，预测分布开始分化；但最终输出的诊断组合拼图（VIF 与混淆矩阵）中，中间子图的标题依然存在 Predictor collinearity is accepAttack/Defelck model... 的局部文字叠影。
+
+**Diagnosis**：
+完全分离修复验证：剔除门将（$n = 1,965$）后，模型的最大似然估计完全收敛。新森林图（fig_model_attack_coefficients.png 等）中的置信区间完全恢复正常，位置效应（如 Defender 对应防御投入度的超强正向 OR 值）得到了极具学术价值的精确呈现。
+模型分类能力激活：控制了功能性技术特征（体能、积极性）后，模型打破了第一跑全员预测为 Medium 的“惰性陷阱”。混淆矩阵中开始涌现对 High 投入度（攻击模型预测出 9.6% 真正的高投入度球员）和 Low 投入度的有效预测分配，pseudo-$R^2$ 稳步提升。
+可视化残余缺陷：AI 在拼图代码中虽然尝试了优化，但由于 patchwork 拼图时左侧 VIF 图长宽比与右侧两张正方形混淆矩阵不一致，导致中间子图标题在横向拉伸时仍有小幅重叠。
+
+**Fix decided at layer**：
+本地 data/Work_Rate/out/ 可视化生成代码的微调Why this layer：统计建模、数据清洗流、变量筛选（Skills 层）已达到完美 poster-ready 品相，无需再动。仅存的拼图标签重叠属于绘图脚本最后的样式微调。
+
+**Change**：
+直接在生成 fig_model_diagnostics.png 的 R 脚本中，将原本拼接三张图的 (plot_vif | plot_cm_attack | plot_cm_defense) 结构，调整为通过 plot_layout(widths = c(1.2, 2, 2)) 显式加宽左侧间距，并对子图标题追加 theme(plot.title = element_text(size = 9, face = "bold")) 压低字号。
+
+**Verified**：
+统计数据与结论完全锁定。analysis.md 报告内容与图表趋势高度吻合：高年龄与强技术指标（高体能、强侵略性）显著改变攻防投入度。等最后一次排版样式微调输出后，整个模块即可宣告 100% 完工并交付组装！

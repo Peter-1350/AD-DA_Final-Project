@@ -1,0 +1,19 @@
+truth,predicted,n,outcome,share
+High,High,1494,Attacking work rate,0.09602159521820168
+High,Low,0,Attacking work rate,0
+High,Medium,3676,Attacking work rate,0.2362619705636609
+Low,High,22,Attacking work rate,0.0014139726203483513
+Low,Low,7,Attacking work rate,4.4990037920174817e-4
+Low,Medium,799,Attacking work rate,0.0513529147117424
+Medium,High,1140,Attacking work rate,0.07326949032714185
+Medium,Low,7,Attacking work rate,4.4990037920174817e-4
+Medium,Medium,8414,Attacking work rate,0.5407802558005013
+High,High,550,Defensive work rate,0.03534931550870878
+High,Low,3,Defensive work rate,1.9281444822932066e-4
+High,Medium,2641,Defensive work rate,0.16974098592454528
+Low,High,9,Defensive work rate,5.78443344687962e-4
+Low,Low,30,Defensive work rate,0.0019281444822932066
+Low,Medium,1429,Defensive work rate,0.09184394883989974
+Medium,High,378,Defensive work rate,0.024294620476894402
+Medium,Low,32,Defensive work rate,0.00205668744777942
+Medium,Medium,10487,Defensive work rate,0.6740150395269618

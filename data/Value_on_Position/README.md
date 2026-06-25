@@ -33,6 +33,8 @@
 
 分析必须覆盖全部 6 项核心技能——不要为了降低共线性而排除其中任何一项。所有 6 项技能必须同时出现在主效应模型和交互模型中（可以先将连续变量标准化后再进入交互项）。共线性应通过 VIF 诊断和谨慎解读来处理，而不是通过删除研究变量。
 
+位置变量必须使用 `position_group`（4 组：Attack / Midfield / Defense / GK），不能使用 `best_position`（15 个单独位置）。
+
 必须包含的技能：
 
 - `Pace Total`
@@ -46,13 +48,13 @@
 
 基础模型先回答“总体上哪些技能和身价相关”：
 
-`log10(Value + 1) ~ Position + Age + TotalStats + Skills`
+`log10(value + 1) ~ position_group + age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z`
 
-然后再加入交互项，回答“不同位置的定价权重是否不同”：
+然后再加入交互项，回答"不同位置的定价权重是否不同"：
 
-`log10(Value + 1) ~ Position * Skills + Age + TotalStats`
+`log10(value + 1) ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z`
 
-这里的 `Skills` 固定为全部 6 项核心技能（见上方列表），不可删减。
+这里的 `Skills` 固定为全部 6 项核心技能（见上方列表），不可删减。`position_group` 是 4 组分类变量（Attack / Midfield / Defense / GK），不可使用细粒度位置的 `best_position`。
 
 ### 3. 分位置建模
 
@@ -92,7 +94,7 @@
 
 先建立一个没有交互项的模型：
 
-`log10(Value + 1) ~ Position + Age + TotalStats + Pace + Shooting + Passing + Dribbling + Defending + Physicality`
+`log10(value + 1) ~ position_group + age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z`
 
 用途：
 
@@ -103,11 +105,11 @@
 
 加入位置交互项：
 
-`log10(Value + 1) ~ Position * (Pace + Shooting + Passing + Dribbling + Defending + Physicality) + Age + TotalStats`
+`log10(value + 1) ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z`
 
 用途：
 
-- 检验不同位置对技能是否有不同的“市场定价”
+- 检验不同位置对技能是否有不同的"市场定价"
 - 找出位置特异的关键技能
 
 ### Step 4: 分位置解释
@@ -143,26 +145,26 @@
 
 ### 模型 1: 主效应模型
 
-`log10(Value + 1) ~ Position + Age + TotalStats + Skills`
+`log10(value + 1) ~ position_group + age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z`
 
 用途：
 
-- 得到一个总体上“哪些技能和身价相关”的答案
+- 得到一个总体上"哪些技能和身价相关"的答案
 
 ### 模型 2: 交互模型
 
-`log10(Value + 1) ~ Position * Skills + Age + TotalStats`
+`log10(value + 1) ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z`
 
 用途：
 
 - 检验技能的市场价值是否因位置而变
-- 用于解释“同一项技能在不同位置的不同定价”
+- 用于解释"同一项技能在不同位置的不同定价"
 
 ### 模型 3: 分位置模型
 
-对每个位置单独拟合：
+对四个 `position_group` 分别拟合：
 
-`log10(Value + 1) ~ Age + TotalStats + Skills`
+`log10(value + 1) ~ age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z`
 
 用途：
 
@@ -171,7 +173,7 @@
 
 ## 需要注意的统计问题
 
-- `Position` 必须作为分类变量处理，lm 会自动生成 dummy variables。
+- `position_group` 必须作为分类变量处理。已知它在 `00_setup.R` 中被设为 factor（Attack / Midfield / Defense / GK / Other），直接使用即可。**不要使用 `best_position`（15 个水平）代替 `position_group`。**
 - 技能变量和位置高度相关，交互项会带来更强的共线性，必须检查 VIF 或其他 collinearity 指标。
 - **不要为了降低共线性而删除技能变量。** 全部 6 项技能是研究问题的定义的一部分。共线性应在诊断中报告、在论文局限性中讨论，而不是通过删除变量来绕过。
 - 结果解读要以“关联”而不是“因果”来写。
@@ -181,7 +183,7 @@
 - 数据文件名包含空格，读取时要直接引用完整路径。
 - 先检查列名是否存在空格或括号，必要时在代码中统一重命名。
 - `Value(in Euro)` 和 `Wage(in Euro)` 这两列可能需要先清理数值格式，再做分析。
-- 如果使用对数模型，要先处理 0 值，因为 `log(0)` 不可用。
+- 建模前必须排除零身价球员：`filter(value_eur > 0)`。仅靠 `log10(value + 1)` 不能消除地板效应——零值压缩到 `log10(1) = 0` 会系统性地扭曲残差结构。
 - 先把位置变量设为 `factor`，再放进回归模型，避免它被误当作数值变量。
 - 如果要比较位置间的技能差异，优先考虑交互项或分位置模型，不要只看整体主效应。
 

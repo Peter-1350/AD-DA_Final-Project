@@ -1,176 +1,165 @@
-library(tidyverse)
-library(broom)
+source("data/Nationality/out/scripts/00_setup.R")
 library(performance)
-library(scales)
-library(viridis)
-library(glue)
 
-root_dir <- normalizePath(file.path(getwd()), winslash = "/", mustWork = TRUE)
-out_dir <- file.path(root_dir, "data", "Nationality", "out")
-fig_dir <- file.path(out_dir, "figs")
-dir.create(fig_dir, recursive = TRUE, showWarnings = FALSE)
+test_df <- readRDS(file.path(out_dir, "nationality_test_df.rds"))
 
-save_poster_fig <- function(plot, filename, width = 8, height = 6) {
-  title <- plot$labels$title %||% ""
-  subtitle <- plot$labels$subtitle %||% ""
-  if (nchar(title) > 75) warning("Long title: ", title)
-  if (nchar(subtitle) > 125) warning("Long subtitle: ", subtitle)
-  ggsave(file.path(fig_dir, filename), plot, width = width, height = height, dpi = 300)
-}
+model_strata <- tibble(
+  position_group = factor(c("Midfielder", "Defender", "Forward"),
+                          levels = levels(test_df$position_group)),
+  ability_tier = factor(c("Regular (70-77)", "Depth/Youth (<70)", "Depth/Youth (<70)"),
+                        levels = levels(test_df$ability_tier)),
+  model_id = c("regular_midfielders", "depth_defenders", "depth_forwards")
+)
 
-fmt_p <- function(p) {
-  case_when(
-    is.na(p) ~ "NA",
-    p < 0.001 ~ "< .001",
-    TRUE ~ paste0("= ", number(p, accuracy = 0.001))
-  )
-}
-
-model_df <- readRDS(file.path(out_dir, "nationality_test_df.rds")) %>%
-  mutate(
-    nationality = fct_infreq(nationality),
-    position_group = factor(position_group),
-    ability_tier = factor(ability_tier)
-  )
-
-fit_one <- function(stratum) {
-  dat <- model_df %>%
-    filter(stratum_label == stratum) %>%
+fit_one <- function(position, tier) {
+  model_data <- test_df %>%
+    filter(position_group == position, ability_tier == tier) %>%
     mutate(
+      nationality = fct_infreq(nationality),
       nationality = fct_relevel(nationality, names(sort(table(nationality), decreasing = TRUE))[1]),
-      overall_c = overall - mean(overall),
-      potential_c = potential - mean(potential),
-      age_c = age - mean(age)
+      age_z = as.numeric(scale(age)),
+      potential_z = as.numeric(scale(potential)),
+      total_stats_z = as.numeric(scale(total_stats))
     )
 
   fit <- glm(
-    value_eur ~ nationality + overall_c + potential_c + age_c,
-    family = Gamma(link = "log"),
-    data = dat
+    value_eur ~ nationality + age_z + potential_z + total_stats_z,
+    data = model_data,
+    family = Gamma(link = "log")
   )
 
-  safe_name <- str_to_lower(str_replace_all(stratum, "[^A-Za-z0-9]+", "_"))
-
-  diag_plot <- plot(performance::check_model(fit, residual_type = "normal"))
-  ggsave(
-    file.path(fig_dir, paste0("fig_diag_gamma_", safe_name, ".png")),
-    diag_plot,
-    width = 11,
-    height = 8,
-    dpi = 300
-  )
-
-  vif_tbl <- performance::check_collinearity(fit) %>%
-    as_tibble() %>%
-    mutate(stratum_label = stratum)
-
-  tidy_tbl <- broom::tidy(fit, conf.int = TRUE, exponentiate = TRUE) %>%
-    mutate(
-      stratum_label = stratum,
-      term_clean = case_when(
-        term == "(Intercept)" ~ "Intercept",
-        str_starts(term, "nationality") ~ str_remove(term, "^nationality"),
-        term == "overall_c" ~ "Overall rating",
-        term == "potential_c" ~ "Potential rating",
-        term == "age_c" ~ "Age",
-        TRUE ~ term
-      ),
-      percent_diff = (estimate - 1) * 100,
-      percent_low = (conf.low - 1) * 100,
-      percent_high = (conf.high - 1) * 100
-    )
-
-  glance_tbl <- broom::glance(fit) %>%
-    mutate(
-      stratum_label = stratum,
-      n = nobs(fit),
-      baseline_nationality = levels(dat$nationality)[1]
-    )
-
-  list(fit = fit, tidy = tidy_tbl, glance = glance_tbl, vif = vif_tbl, data = dat)
+  list(data = model_data, fit = fit)
 }
 
-strata <- c("Regular midfielders", "Regular defenders", "Development midfielders")
-fits <- setNames(map(strata, fit_one), strata)
+models <- pmap(
+  list(model_strata$position_group, model_strata$ability_tier),
+  fit_one
+)
+names(models) <- model_strata$model_id
+saveRDS(models, file.path(out_dir, "gamma_model_fits.rds"))
 
-coef_tbl <- map_dfr(fits, "tidy")
-glance_tbl <- map_dfr(fits, "glance")
-vif_tbl <- map_dfr(fits, "vif")
+coef_tbl <- imap_dfr(models, function(obj, id) {
+  broom::tidy(obj$fit, conf.int = TRUE, exponentiate = TRUE) %>%
+    mutate(
+      model_id = id,
+      n = nrow(obj$data),
+      adj_r2 = NA_real_,
+      percent_change = 100 * (estimate - 1),
+      percent_low = 100 * (conf.low - 1),
+      percent_high = 100 * (conf.high - 1)
+    ) %>%
+    relocate(model_id, n)
+})
+
+glance_tbl <- imap_dfr(models, function(obj, id) {
+  broom::glance(obj$fit) %>%
+    mutate(model_id = id, n = nrow(obj$data)) %>%
+    relocate(model_id, n)
+})
+
+vif_tbl <- imap_dfr(models, function(obj, id) {
+  as.data.frame(performance::check_collinearity(obj$fit)) %>%
+    as_tibble() %>%
+    mutate(model_id = id) %>%
+    relocate(model_id)
+})
 
 readr::write_csv(coef_tbl, file.path(out_dir, "gamma_coef_tbl.csv"))
 readr::write_csv(glance_tbl, file.path(out_dir, "gamma_glance_tbl.csv"))
 readr::write_csv(vif_tbl, file.path(out_dir, "gamma_vif_tbl.csv"))
-saveRDS(fits, file.path(out_dir, "gamma_model_fits.rds"))
 
-plot_coef <- coef_tbl %>%
-  filter(stratum_label %in% c("Regular midfielders", "Regular defenders")) %>%
-  filter(str_starts(term, "nationality")) %>%
-  left_join(glance_tbl %>% select(stratum_label, baseline_nationality, n), by = "stratum_label") %>%
-  group_by(stratum_label) %>%
-  mutate(term_clean = fct_reorder(term_clean, percent_diff)) %>%
-  ungroup()
+diag_paths <- imap_chr(models, function(obj, id) {
+  p <- performance::check_model(obj$fit, residual_type = "normal")
+  path <- file.path(fig_dir, paste0("fig_diag_gamma_", id, ".png"))
+  png(path, width = 11, height = 8, units = "in", res = 300)
+  print(p)
+  dev.off()
+  path
+})
 
-regular_stats <- glance_tbl %>%
-  filter(stratum_label %in% c("Regular midfielders", "Regular defenders")) %>%
-  transmute(stratum_label, label = glue("{stratum_label}: n={n}, baseline={baseline_nationality}")) %>%
-  pull(label) %>%
-  paste(collapse = "; ")
-
-p_coef <- ggplot(plot_coef, aes(x = percent_diff, y = term_clean, color = stratum_label)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey45") +
-  geom_errorbar(aes(xmin = percent_low, xmax = percent_high), width = 0.18, linewidth = 0.8) +
-  geom_point(size = 3) +
-  facet_wrap(~ stratum_label, scales = "free_y") +
-  scale_x_continuous(labels = label_percent(scale = 1)) +
-  scale_color_viridis_d(option = "D", end = 0.75) +
-  labs(
-    title = "Nationality premiums remain modest in regular tier",
-    subtitle = regular_stats,
-    x = "Value ratio vs baseline nationality (95% CI)",
-    y = NULL,
-    color = NULL,
-    caption = "Gamma GLM with log link; controls: age, overall, potential."
-  ) +
-  theme_minimal(base_size = 16) +
-  theme(
-    legend.position = "none",
-    plot.title = element_text(face = "bold", size = 18),
-    plot.subtitle = element_text(color = "grey30", size = 11),
-    plot.caption = element_text(color = "grey45", size = 10, hjust = 0),
-    panel.grid.minor = element_blank()
+regular_coef <- coef_tbl %>%
+  filter(
+    model_id %in% c("regular_midfielders", "depth_defenders", "depth_forwards"),
+    str_detect(term, "^nationality")
+  ) %>%
+  mutate(
+    nationality = str_remove(term, "^nationality"),
+    model_label = recode(
+      model_id,
+      regular_midfielders = "Regular midfielders",
+      depth_defenders = "Depth defenders",
+      depth_forwards = "Depth forwards"
+    ),
+    pct_label = sprintf("%+.0f%%", percent_change)
   )
+
+p_nat_coef <- ggplot(
+  regular_coef,
+  aes(x = percent_change, y = fct_reorder(nationality, percent_change), color = model_label)
+) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
+  geom_errorbar(aes(xmin = percent_low, xmax = percent_high), width = 0.17, linewidth = 0.85) +
+  geom_point(size = 3.1) +
+  geom_text(aes(label = pct_label), nudge_y = 0.18, size = 4, show.legend = FALSE) +
+  facet_wrap(~ model_label, scales = "free_y") +
+  scale_x_continuous(labels = label_percent(scale = 1)) +
+  scale_color_viridis_d(option = "D", end = 0.78) +
+  labs(
+    title = "Nationality terms remain after controls",
+    subtitle = "Gamma log-link models control age, potential, and total stats",
+    x = "Value ratio vs most common nationality (%)",
+    y = NULL,
+    color = "Model"
+  ) +
+  theme_poster() +
+  theme(legend.position = "none")
+
+save_poster_fig(
+  p_nat_coef,
+  file.path(fig_dir, "fig_gamma_nationality_coefficients_regular.png"),
+  width = 11,
+  height = 6.5
+)
 
 covar_coef <- coef_tbl %>%
-  filter(term %in% c("overall_c", "potential_c", "age_c")) %>%
+  filter(
+    model_id %in% c("regular_midfielders", "depth_defenders", "depth_forwards"),
+    term %in% c("age_z", "potential_z", "total_stats_z")
+  ) %>%
   mutate(
-    term_clean = factor(term_clean, levels = c("Age", "Potential rating", "Overall rating")),
-    stratum_label = factor(stratum_label, levels = strata)
+    term_label = recode(
+      term,
+      age_z = "Age (1 SD)",
+      potential_z = "Potential (1 SD)",
+      total_stats_z = "Total stats (1 SD)"
+    ),
+    model_label = recode(
+      model_id,
+      regular_midfielders = "Regular midfielders",
+      depth_defenders = "Depth defenders",
+      depth_forwards = "Depth forwards"
+    )
   )
 
-p_covars <- ggplot(covar_coef, aes(x = percent_diff, y = term_clean, color = stratum_label)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey45") +
-  geom_errorbar(aes(xmin = percent_low, xmax = percent_high), width = 0.18, position = position_dodge(width = 0.55)) +
-  geom_point(size = 3, position = position_dodge(width = 0.55)) +
+p_cov <- ggplot(covar_coef, aes(x = percent_change, y = term_label, color = model_label)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
+  geom_errorbar(aes(xmin = percent_low, xmax = percent_high), width = 0.2, linewidth = 0.85,
+                position = position_dodge(width = 0.45)) +
+  geom_point(size = 3, position = position_dodge(width = 0.45)) +
   scale_x_continuous(labels = label_percent(scale = 1)) +
-  scale_color_viridis_d(option = "D", end = 0.85) +
+  scale_color_viridis_d(option = "D", end = 0.78) +
   labs(
-    title = "Ability and potential dominate value associations",
-    subtitle = "Gamma log-link coefficients are multiplicative changes per one rating/year",
-    x = "Estimated percent difference in value (95% CI)",
+    title = "Ability covariates dwarf most nationality terms",
+    subtitle = "Multiplicative value ratios from Gamma log-link models",
+    x = "Expected value difference per 1 SD (%)",
     y = NULL,
-    color = "Stratum"
+    color = "Model"
   ) +
-  theme_minimal(base_size = 16) +
-  theme(
-    plot.title = element_text(face = "bold", size = 18),
-    plot.subtitle = element_text(color = "grey30", size = 12),
-    panel.grid.minor = element_blank(),
-    legend.position = "bottom"
-  )
+  theme_poster()
 
-save_poster_fig(p_coef, "fig_gamma_nationality_coefficients_regular.png", width = 10, height = 6.5)
-save_poster_fig(p_covars, "fig_gamma_covariate_coefficients.png", width = 9, height = 6)
-
-cat("Gamma models complete\n")
-print(glance_tbl %>% select(stratum_label, n, baseline_nationality, deviance, df.residual, AIC))
-print(coef_tbl %>% filter(str_starts(term, "nationality")) %>% arrange(stratum_label, desc(abs(percent_diff))) %>% group_by(stratum_label) %>% slice_head(n = 5))
+save_poster_fig(
+  p_cov,
+  file.path(fig_dir, "fig_gamma_covariate_coefficients.png"),
+  width = 9,
+  height = 5.5
+)

@@ -203,6 +203,7 @@ fit_gamma <- glm(
 # 提取系数时，由于是 log link，系数的解释与 log(y) 的 OLS 完全一样（百分比变化）
 tidy_gamma <- broom::tidy(fit_gamma, exponentiate = TRUE, conf.int = TRUE) 
 # exponentiate = TRUE 会直接把系数 exp(beta) 变成乘法效应比率 (Ratio)
+
 ```
 
 ## 多分类逻辑回归（Multinomial Logit）的专项诊断与优化

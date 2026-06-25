@@ -1,85 +1,76 @@
-stratum_label,group1,group2,p.value
-Regular midfielders,England,Argentina,0.16271980272240424
-Regular midfielders,England,Brazil,0.305050840983908
-Regular midfielders,Germany,England,0.305050840983908
-Regular midfielders,Spain,Argentina,0.305050840983908
-Regular midfielders,France,Argentina,0.49495324070441077
-Regular midfielders,Portugal,Argentina,0.49495324070441077
-Regular midfielders,Spain,Germany,0.49495324070441077
-Regular midfielders,Germany,France,0.5191244384421507
-Regular midfielders,Portugal,Germany,0.5191244384421507
-Regular midfielders,Spain,Brazil,0.5191244384421507
-Regular midfielders,France,England,0.5226318455458284
-Regular midfielders,Italy,Argentina,0.5226318455458284
-Regular midfielders,Italy,England,0.5226318455458284
-Regular midfielders,Portugal,Brazil,0.5312085911211538
-Regular midfielders,France,Brazil,0.5550209398394622
-Regular midfielders,Spain,England,0.5550209398394622
-Regular midfielders,Brazil,Argentina,0.6938154252142604
-Regular midfielders,Italy,Germany,0.6938154252142604
-Regular midfielders,Portugal,England,0.7762523730679279
-Regular midfielders,Italy,Brazil,0.7909120330540097
-Regular midfielders,Portugal,Italy,0.7909120330540097
-Regular midfielders,Spain,Italy,0.7909120330540097
-Regular midfielders,Germany,Argentina,0.8050005127221008
-Regular midfielders,Germany,Brazil,0.8050005127221008
-Regular midfielders,Italy,France,0.8050005127221008
-Regular midfielders,Portugal,France,0.8050005127221008
-Regular midfielders,Spain,France,0.8050005127221008
-Regular midfielders,Spain,Portugal,0.9465204243967552
-Regular defenders,Netherlands,Argentina,1.8768721662882804e-4
-Regular defenders,France,Argentina,4.633292108855748e-4
-Regular defenders,Germany,Argentina,9.998017006249355e-4
-Regular defenders,Spain,Argentina,0.0031807913315144336
-Regular defenders,Brazil,Argentina,0.0039370287120079
-Regular defenders,England,Argentina,0.0039370287120079
-Regular defenders,Netherlands,Italy,0.004061919782794211
-Regular defenders,Netherlands,Brazil,0.016948846739857366
-Regular defenders,Italy,France,0.026699606506338507
-Regular defenders,France,Brazil,0.08045753693279126
-Regular defenders,Italy,Germany,0.08279874487682076
-Regular defenders,Spain,Netherlands,0.13276635028083336
-Regular defenders,Netherlands,England,0.13806292378670762
-Regular defenders,Spain,Italy,0.13848900283948898
-Regular defenders,Italy,England,0.15319647341194764
-Regular defenders,Netherlands,Germany,0.1670041177374947
-Regular defenders,Italy,Argentina,0.18649259744807642
-Regular defenders,Germany,Brazil,0.25581134409315404
-Regular defenders,Italy,Brazil,0.25581134409315404
-Regular defenders,France,England,0.3148142931594348
-Regular defenders,Spain,France,0.3148142931594348
-Regular defenders,Spain,Brazil,0.411921050635053
-Regular defenders,Germany,France,0.4507615565350622
-Regular defenders,England,Brazil,0.4681031548159119
-Regular defenders,Netherlands,France,0.4681031548159119
-Regular defenders,Germany,England,0.8179271159983056
-Regular defenders,Spain,Germany,0.8222007852861792
-Regular defenders,Spain,England,0.9837361008885745
-Development midfielders,China PR,Argentina,1.9716044392156967e-46
-Development midfielders,Spain,China PR,2.1108295175427132e-45
-Development midfielders,Germany,China PR,2.059509207613517e-43
-Development midfielders,France,China PR,1.6748180195667794e-39
-Development midfielders,Italy,China PR,7.868043517653605e-33
-Development midfielders,England,China PR,5.27277968717113e-32
-Development midfielders,Republic of Ireland,Argentina,6.688612939569338e-28
-Development midfielders,Spain,Republic of Ireland,4.287076412214934e-25
-Development midfielders,England,Argentina,2.4869329214221885e-22
-Development midfielders,Republic of Ireland,France,3.1991099922076955e-18
-Development midfielders,Spain,England,1.6542516398356195e-17
-Development midfielders,Republic of Ireland,Germany,3.81989314914706e-17
-Development midfielders,Republic of Ireland,Italy,6.857888990671259e-16
-Development midfielders,Germany,Argentina,4.556520991915783e-12
-Development midfielders,Republic of Ireland,England,8.088773767133976e-9
-Development midfielders,France,England,1.858509985860767e-8
-Development midfielders,Republic of Ireland,China PR,4.5949702861583625e-8
-Development midfielders,Spain,Germany,8.178580964404372e-8
-Development midfielders,Italy,England,1.4399161513258682e-7
-Development midfielders,Germany,England,1.8178542479948428e-5
-Development midfielders,France,Argentina,8.890310939853037e-5
-Development midfielders,Italy,Argentina,0.001490944847913367
-Development midfielders,Spain,France,0.011585004717212131
-Development midfielders,Italy,Germany,0.012313348697679465
-Development midfielders,Germany,France,0.025057628787517734
-Development midfielders,Spain,Italy,0.0610670479598193
-Development midfielders,Spain,Argentina,0.0910525278938541
-Development midfielders,Italy,France,0.6843193601709749
+position_group,ability_tier,.y.,group1,group2,n1,n2,statistic,p,p.adj,p.adj.signif
+Forward,Depth/Youth (<70),log_value,Argentina,England,91,226,15275.5,1.34e-11,1e-10,****
+Forward,Depth/Youth (<70),log_value,Argentina,France,91,93,4375.5,0.691,0.691,ns
+Forward,Depth/Youth (<70),log_value,Argentina,Germany,91,139,7788,0.003,0.006,**
+Forward,Depth/Youth (<70),log_value,Argentina,Italy,91,62,3198,0.161,0.201,ns
+Forward,Depth/Youth (<70),log_value,Argentina,Spain,91,93,3546.5,0.058,0.079,ns
+Forward,Depth/Youth (<70),log_value,England,France,226,93,6084.5,3.38e-9,1.69e-8,****
+Forward,Depth/Youth (<70),log_value,England,Germany,226,139,11018.5,1.66e-6,4.98e-6,****
+Forward,Depth/Youth (<70),log_value,England,Italy,226,62,4682.5,6.32e-5,1.58e-4,***
+Forward,Depth/Youth (<70),log_value,England,Spain,226,93,4260,6.85e-17,1.03e-15,****
+Forward,Depth/Youth (<70),log_value,France,Germany,93,139,7542.5,0.031,0.052,ns
+Forward,Depth/Youth (<70),log_value,France,Italy,93,62,3157.5,0.317,0.366,ns
+Forward,Depth/Youth (<70),log_value,France,Spain,93,93,3580.5,0.043,0.064,ns
+Forward,Depth/Youth (<70),log_value,Germany,Italy,139,62,4044.5,0.488,0.523,ns
+Forward,Depth/Youth (<70),log_value,Germany,Spain,139,93,4036.5,1.26e-6,4.72e-6,****
+Forward,Depth/Youth (<70),log_value,Italy,Spain,62,93,2094.5,0.004,0.007,**
+Midfielder,Depth/Youth (<70),log_value,Argentina,England,204,415,62891.5,7.989999999999999e-23,3.99e-22,****
+Midfielder,Depth/Youth (<70),log_value,Argentina,France,204,219,27346,6.67e-5,8.34e-5,****
+Midfielder,Depth/Youth (<70),log_value,Argentina,Germany,204,349,48312.5,2.28e-12,4.89e-12,****
+Midfielder,Depth/Youth (<70),log_value,Argentina,Spain,204,203,22730.5,0.088,0.088,ns
+Midfielder,Depth/Youth (<70),log_value,Argentina,Republic of Ireland,204,153,26288.5,1.67e-28,2.5e-27,****
+Midfielder,Depth/Youth (<70),log_value,England,France,415,219,32900.5,1.06e-8,1.77e-8,****
+Midfielder,Depth/Youth (<70),log_value,England,Germany,415,349,59172,1.3e-5,1.77e-5,****
+Midfielder,Depth/Youth (<70),log_value,England,Spain,415,203,24152,6.5e-18,1.95e-17,****
+Midfielder,Depth/Youth (<70),log_value,England,Republic of Ireland,415,153,41932,4.33e-9,8.12e-9,****
+Midfielder,Depth/Youth (<70),log_value,France,Germany,219,349,42562,0.022,0.024,*
+Midfielder,Depth/Youth (<70),log_value,France,Spain,219,203,18984,0.01,0.011,*
+Midfielder,Depth/Youth (<70),log_value,France,Republic of Ireland,219,153,25753,1.14e-18,4.28e-18,****
+Midfielder,Depth/Youth (<70),log_value,Germany,Spain,349,203,25595,5.26e-8,7.89e-8,****
+Midfielder,Depth/Youth (<70),log_value,Germany,Republic of Ireland,349,153,39436.5,1.64e-17,4.1e-17,****
+Midfielder,Depth/Youth (<70),log_value,Spain,Republic of Ireland,203,153,25587,1.22e-25,9.15e-25,****
+Midfielder,Regular (70-77),log_value,Argentina,England,124,86,4137.5,0.006,0.087,ns
+Midfielder,Regular (70-77),log_value,Argentina,France,124,119,6488.5,0.105,0.295,ns
+Midfielder,Regular (70-77),log_value,Argentina,Germany,124,74,4471.5,0.766,0.776,ns
+Midfielder,Regular (70-77),log_value,Argentina,Spain,124,151,8037.5,0.044,0.164,ns
+Midfielder,Regular (70-77),log_value,Argentina,Brazil,124,132,7725.5,0.439,0.549,ns
+Midfielder,Regular (70-77),log_value,England,France,86,119,5641,0.212,0.353,ns
+Midfielder,Regular (70-77),log_value,England,Germany,86,74,3795,0.036,0.164,ns
+Midfielder,Regular (70-77),log_value,England,Spain,86,151,7001,0.317,0.432,ns
+Midfielder,Regular (70-77),log_value,England,Brazil,86,132,6601,0.042,0.164,ns
+Midfielder,Regular (70-77),log_value,France,Germany,119,74,4903,0.185,0.347,ns
+Midfielder,Regular (70-77),log_value,France,Spain,119,151,8803,0.776,0.776,ns
+Midfielder,Regular (70-77),log_value,France,Brazil,119,132,8435,0.312,0.432,ns
+Midfielder,Regular (70-77),log_value,Germany,Spain,74,151,4870.5,0.118,0.295,ns
+Midfielder,Regular (70-77),log_value,Germany,Brazil,74,132,4724.5,0.698,0.776,ns
+Midfielder,Regular (70-77),log_value,Spain,Brazil,151,132,10879,0.184,0.347,ns
+Defender,Depth/Youth (<70),log_value,Argentina,England,171,422,53671,1.29e-20,3.22e-20,****
+Defender,Depth/Youth (<70),log_value,Argentina,France,171,195,21882,2.46e-7,3.69e-7,****
+Defender,Depth/Youth (<70),log_value,Argentina,Germany,171,284,33667.5,4.79e-12,8.98e-12,****
+Defender,Depth/Youth (<70),log_value,Argentina,Spain,171,191,18389,0.038,0.041,*
+Defender,Depth/Youth (<70),log_value,Argentina,China PR,171,169,27218.5,4.1499999999999996e-45,3.11e-44,****
+Defender,Depth/Youth (<70),log_value,England,France,422,195,33285.5,1.34e-4,1.83e-4,***
+Defender,Depth/Youth (<70),log_value,England,Germany,422,284,49927,1.68e-4,2.1e-4,***
+Defender,Depth/Youth (<70),log_value,England,Spain,422,191,23924.5,7.25e-16,1.55e-15,****
+Defender,Depth/Youth (<70),log_value,England,China PR,422,169,58071.5,6.41e-33,1.92e-32,****
+Defender,Depth/Youth (<70),log_value,France,Germany,195,284,28933.5,0.403,0.403,ns
+Defender,Depth/Youth (<70),log_value,France,Spain,195,191,14712,3.58e-4,4.13e-4,***
+Defender,Depth/Youth (<70),log_value,France,China PR,195,169,28726.5,1.9599999999999998e-34,7.35e-34,****
+Defender,Depth/Youth (<70),log_value,Germany,Spain,284,191,19469,1.8e-7,3e-7,****
+Defender,Depth/Youth (<70),log_value,Germany,China PR,284,169,41962.5,1.47e-40,7.35e-40,****
+Defender,Depth/Youth (<70),log_value,Spain,China PR,191,169,30032,3.7299999999999995e-45,3.11e-44,****
+Goalkeeper,Depth/Youth (<70),log_value,England,France,138,69,3401.5,8.19e-4,0.002,**
+Goalkeeper,Depth/Youth (<70),log_value,England,Germany,138,134,7110,9.89e-4,0.002,**
+Goalkeeper,Depth/Youth (<70),log_value,England,Italy,138,59,4060,0.977,0.977,ns
+Goalkeeper,Depth/Youth (<70),log_value,England,Spain,138,73,2526,2.62e-9,1.96e-8,****
+Goalkeeper,Depth/Youth (<70),log_value,England,United States,138,61,4785,0.124,0.155,ns
+Goalkeeper,Depth/Youth (<70),log_value,France,Germany,69,134,5011,0.328,0.351,ns
+Goalkeeper,Depth/Youth (<70),log_value,France,Italy,69,59,2617,0.005,0.009,**
+Goalkeeper,Depth/Youth (<70),log_value,France,Spain,69,73,1875.5,0.009,0.013,*
+Goalkeeper,Depth/Youth (<70),log_value,France,United States,69,61,3072.5,6.31e-6,1.89e-5,****
+Goalkeeper,Depth/Youth (<70),log_value,Germany,Italy,134,59,4867,0.011,0.014,*
+Goalkeeper,Depth/Youth (<70),log_value,Germany,Spain,134,73,3144,2.2e-5,5.5e-5,****
+Goalkeeper,Depth/Youth (<70),log_value,Germany,United States,134,61,5830,1.83e-6,6.86e-6,****
+Goalkeeper,Depth/Youth (<70),log_value,Italy,Spain,59,73,1037.5,3.25e-7,1.62e-6,****
+Goalkeeper,Depth/Youth (<70),log_value,Italy,United States,59,61,2056.5,0.178,0.205,ns
+Goalkeeper,Depth/Youth (<70),log_value,Spain,United States,73,61,3738.5,1.42e-11,2.13e-10,****

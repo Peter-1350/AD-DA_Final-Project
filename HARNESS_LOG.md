@@ -62,7 +62,7 @@ Codex运行分析同位置相近能力值不同国籍对身价的影响时，Res
 
 ***
 
-### Entry 01 — 2026-06-03 — 牟正阳
+### Entry 02 — 2026-06-03 — 牟正阳
 
 **Observed**：
 Codex将国籍简单分为Top 10 foootball nations和Other nations，结论过于粗糙
@@ -86,80 +86,7 @@ Codex将国籍简单分为Top 10 foootball nations和Other nations，结论过�
 
 ***
 
-## 示例 1 — 图表问题
-
-### Entry 01 — 2026-04-25 — demo
-
-**Observed**：
-codex 第一次跑 penguins demo 时，在 `out/figs/` 中产出 `plot1.png`、`plot2.png`、`plot3.png`，
-图均使用了 ggplot2 默认主题，字体偏小、灰底网格、无标题、坐标轴显示为 `bill_length_mm` 这种代码风格命名。
-
-**Diagnosis**：
-codex 的默认行为是"能画就行"，视觉质量远未达到海报要求。
-
-**Fix decided at layer**：
-
-- 现有的 `skills/poster_figure_quality.md`（已存在，但具体性不足）；
-- AGENTS.md 中加入一条 invariant，强调"poster-ready"的硬性要求。
-
-**Why this layer**：
-仅靠 AGENTS.md 中的全局纪律过于抽象，codex 无法知道具体如何执行；
-具体要求（base\_size、dpi、标题需陈述 finding 等）放入对应 skill 更合适。
-
-**Change**：
-
-1. 在 `poster_figure_quality.md` 中新增"完整模板"段，给出一段可执行的 ggplot 代码；
-2. 在 AGENTS.md invariant 7 中加上 "300dpi PNG"。
-
-**Verified**：
-重跑同一个 prompt 后，新图明显改善：标题、副标题、坐标轴、调色板（viridis）均符合预期。
-但发现一个新问题：codex 将所有图均输出为 8×6，对分布图而言宽度不足（应为更宽的横版）。
-→ 该问题在 Entry 02 中处理。
-
-***
-
-## 示例 2 — 图表问题
-
-### Entry 02 — 2026-04-25 — demo
-
-**Observed**：
-跑完 penguins demo 后，查看 `data/penguins/out/figs/` 中的图，发现所有图的标题均被裁剪：
-
-- `fig_model_coefficients.png`：标题显示为 "Flipper length is the dominant predictor in the b..."；
-- `fig_eda_species_traits.png`：子图标题显示为 "Body mass differs most for Gentoo, with Adelie and Chinstrap o..."；
-- 副标题同样被裁剪。
-
-但内容本身质量较高，codex 严格按 `poster_figure_quality.md` 的要求，将标题写为陈述 finding 的句子，而非 "Coefficient plot" 这种描述性标题。
-
-**Diagnosis**：
-codex 已掌握"标题陈述 finding"这条规则，但 finding 句子写得过长（72 字符），超出 ggsave 默认宽度（8 英寸）能容纳的字符数。
-ggsave 默认会静默截断，不会报错。
-
-skill 在此处的"具体性"出现缺口：它教了 codex"该写什么样的标题"，但未规定标题长度，codex 不知道字符数会影响渲染。
-
-**Fix decided at layer**：
-现有的 `skills/poster_figure_quality.md`，加入"标题长度需匹配图宽"一节。
-
-**Why this layer**：
-
-- 不放在 AGENTS.md（全局纪律）中：这是图表层面的纪律，而非分析层面的纪律；
-- 加在现有 skill 中："标题陈述 finding" 与 "标题不可过长" 是同一条 skill 的两面。
-
-**Change**：
-
-在 `poster_figure_quality.md` 中加入：
-
-- 第 7 小节"标题长度需匹配图宽"，包含字符数限制、三种处理选项与一个 `save_poster_fig()` 自检函数；
-- 自查清单中新增 "标题 ≤ 60 字符，副标题 ≤ 80 字符"。
-
-**Verified**：
-重跑 `bash run.sh data/penguins`，检查新图的标题。
-
-**Reflection**：
-本次循环依赖肉眼检查 PNG。统计 skill 的多数检查可在代码层完成（grep / lint），但仍有部分必须人工检查。因此运行结束后不应只看 `analysis.md`，还应检查全部生成产出。
-
 ---
-
 ## Entry 03 — 2026-06-21 — 潘桂轩
 
 **Observed**：
@@ -210,7 +137,7 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 **Verified**：
 `skills/regression_diagnostics.md` 已更新；`MidField` 的图和 `analysis.md` 当前没有把 `R²` 用作跨模型比较量，现有内容无需改动。
 
-## Entry 07 — 2026-06-24 — [牟正阳]
+## Entry 05 — 2026-06-24 — [牟正阳]
 
 **Observed**：
 对身价取对数 `log(value)` 后进行 OLS 拟合，诊断图右下角 QQ 图依然显示明显的重尾，但 Codex 接受了该结果并未作处理。
@@ -229,9 +156,10 @@ performance::check_model(fit, theme = ggplot2::theme_minimal())
 
 **Verified**：
 应用 Gamma GLM 后，`performance::check_model()` 显示残差分布得到大幅改善，重尾现象收敛。
+
 ---
 
-## Entry 05 — 2026-06-24 — 潘桂轩
+## Entry 06 — 2026-06-24 — 潘桂轩
 
 **Observed**：
 Residuals vs Fitted 图和 Q-Q 图出现系统性的非对称模式：残差在低拟合值端明显偏离。分析已识别出 98 个零身价球员（占 0.56%）但未作处理。
@@ -253,7 +181,7 @@ Invariant #8 已存在但未说明"不执行的后果"，codex 容易跳过。�
 
 ---
 
-## Entry 06 — 2026-06-24 — 潘桂轩
+## Entry 07 — 2026-06-24 — 潘桂轩
 
 **Observed**：
 `fig_model_position_specific_slopes.png` 中 y 轴出现 NA 类别，使图不可解读、无法进 poster。
@@ -275,7 +203,7 @@ Invariant #8 已存在但未说明"不执行的后果"，codex 容易跳过。�
 
 ---
 
-## Entry 07 — 2026-06-24 — 潘桂轩
+## Entry 08 — 2026-06-24 — 潘桂轩
 
 **Observed**：
 `fig_model_position_specific_slopes.png` 中 Attack 显示的是主效应全斜率，而 Midfield/Defense/GK 显示的只是交互偏移量（Δ vs Attack）。Attack 和其他位置在同一图中呈现的是不可比的数量。
@@ -297,7 +225,7 @@ Codex 用 `bind_rows` 拼接了主效应行（Attack = 全斜率）和交互项�
 
 ---
 
-## Entry 08 — 2026-06-24 — 潘桂轩
+## Entry 09 — 2026-06-24 — 潘桂轩
 
 **Observed**：
 Agent 在第三轮中绕开了 Δslope 问题：用交互系数森林图替代了分位置斜率图。"每个位置各自的技能边际效应"这一 poster 核心需求仍无实现方案。
@@ -325,7 +253,7 @@ skill 层修改已完成。下一轮 agent 在跑交互模型时读到该小节�
 
 ---
 
-## Entry 09 — 2026-06-24 — 潘桂轩
+## Entry 10 — 2026-06-24 — 潘桂轩
 
 **Observed**：
 第三轮 agent 将 shooting 和 physicality 从模型中完全移除（主效应和交互模型均只含 4 项技能），导致 README 核心问题"前锋更看重射门还是速度"无法回答。R² 提升至 0.668，但主因是零值排除而非技能精简。
@@ -352,3 +280,29 @@ README 中有三处措辞鼓励了变量丢弃：
 
 **Verified**：
 README 文本修改完成。新 agent 读此 README 后，应不会自行删除技能变量。
+
+---
+
+### Entry 11 — 2026-06-24 — 牟正阳
+
+**Observed**：
+发现 Codex 在处理 Nationality 分组比较时，因 Levene 检验发现方差不齐，就机械地将全局比较从 ANOVA 直接降级为非参数的 Kruskal-Wallis 检验，未考虑身价数据极度右偏且具备经济学绝对意义。
+
+**Diagnosis**：
+Codex 对假设检验的前提决策树过于死板，认为“不满足方差齐性 = 只能用非参数检验”。但对于金钱等极度右偏的连续变量，Kruskal-Wallis 检验检验的是分布的随机优势，难以做直观解释。此时更好的做法是使用能够包容方差异质性的 Welch's ANOVA，或直接过渡到带有 Log 链接的 GLM 模型。
+
+**Fix decided at layer**：
+[x] 现有的 `skills/hypothesis_testing.md`
+
+**Why this layer**：
+这是关于假设检验前置条件失败后决策分支的问题。原技能文件中的决策树没有为极度偏态+异方差的数据提供合适的参数检验出口，导致分析降级失当。
+
+**Change**：
+在 `skills/hypothesis_testing.md` 的 `aov()` 前提要求部分，补充了方差不齐时的分流处理准则，更新了底部的“决策树”，明确加入：
+1. 偏态/方差不齐但可转换 → 使用 `oneway.test()` (Welch's ANOVA)
+2. 极端右偏或严格正值 → 构建 GLM 并提取 emmeans 分析
+
+**Verified**：
+技能规则已更新。后续面对异方差和强右偏数据时，Agent 能够根据新决策树选择更稳健的模型工具，不再盲目退化为秩和检验。
+
+---

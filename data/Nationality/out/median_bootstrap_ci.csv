@@ -1,25 +1,31 @@
-stratum_label,role,nationality,n,median_value_m,ci_low,ci_high
-Regular midfielders,main,Argentina,124,3.1500000000000004,2.55,3.7
-Regular midfielders,main,Brazil,132,3.1,2.6,3.5
-Regular midfielders,main,England,86,4.2,2.9,5.5
-Regular midfielders,main,France,119,3.5,3,3.8
-Regular midfielders,main,Germany,74,2.6,2.4,3.2
-Regular midfielders,main,Italy,56,3.05,2.5,4.2
-Regular midfielders,main,Portugal,52,3.45,3.05,5.15
-Regular midfielders,main,Spain,151,3.6,3.4,4.2
-Regular defenders,main,Argentina,99,2.1,1.6,2.4
-Regular defenders,main,Brazil,144,2.6500000000000004,2.3,3
-Regular defenders,main,England,96,3,2.5,3.6
-Regular defenders,main,France,96,3.6,3.3,4.4
-Regular defenders,main,Germany,87,2.9,2.6,3.8
-Regular defenders,main,Italy,70,2.3499999999999996,2.05,2.8
-Regular defenders,main,Netherlands,42,4.1,2.8,4.951249999999999
-Regular defenders,main,Spain,115,3.3,2.5,3.8
-Development midfielders,robustness,Argentina,204,1.3,1.1,1.3
-Development midfielders,robustness,China PR,152,0.22,0.195,0.275
-Development midfielders,robustness,England,415,0.65,0.6,0.7
-Development midfielders,robustness,France,219,0.925,0.8,1.1
-Development midfielders,robustness,Germany,349,0.825,0.75,0.9
-Development midfielders,robustness,Italy,126,0.975,0.85,1.1
-Development midfielders,robustness,Republic of Ireland,153,0.35,0.3,0.45
-Development midfielders,robustness,Spain,203,1.1,1,1.2
+position_group,ability_tier,nationality,n,median_value_eur,mean_overall,mean_age,conf.low,conf.high
+Forward,Depth/Youth (<70),Argentina,91,900000,65.32967032967034,25.87912087912088,775000,1100000
+Forward,Depth/Youth (<70),England,226,525000,61.38053097345133,24.32300884955752,487500,575000
+Forward,Depth/Youth (<70),France,93,950000,63.60215053763441,23.333333333333332,800000,1200000
+Forward,Depth/Youth (<70),Germany,139,750000,63.13669064748201,23.9568345323741,650000,850000
+Forward,Depth/Youth (<70),Italy,62,850000,63.95161290322581,25,600000,1000000
+Forward,Depth/Youth (<70),Spain,93,1100000,64.52688172043011,23.236559139784948,975000,1300000
+Midfielder,Depth/Youth (<70),Argentina,204,1300000,65.5,23.980392156862745,1100000,1300000
+Midfielder,Depth/Youth (<70),England,415,650000,61.963855421686745,23.50602409638554,600000,700000
+Midfielder,Depth/Youth (<70),France,219,925000,63.465753424657535,22.76255707762557,800000,1000000
+Midfielder,Depth/Youth (<70),Germany,349,825000,63.34957020057307,23.650429799426934,750000,875000
+Midfielder,Depth/Youth (<70),Spain,203,1100000,64.56650246305419,23.354679802955665,1000000,1200000
+Midfielder,Depth/Youth (<70),Republic of Ireland,153,350000,59.76470588235294,23.69281045751634,300000,450000
+Midfielder,Regular (70-77),Argentina,124,3150000,72.56451612903226,27.524193548387096,2550000,3700000
+Midfielder,Regular (70-77),England,86,4200000,72.93023255813954,25.523255813953487,3050000,5500000
+Midfielder,Regular (70-77),France,119,3500000,72.8655462184874,26.33613445378151,3100000,3800000
+Midfielder,Regular (70-77),Germany,74,2600000,72.55405405405405,26.824324324324323,2400000,3351249.999999999
+Midfielder,Regular (70-77),Spain,151,3600000,73.09933774834437,27.192052980132452,3400000,4200000
+Midfielder,Regular (70-77),Brazil,132,3100000,73.12121212121212,27.356060606060606,2600000,3500000
+Defender,Depth/Youth (<70),Argentina,171,1100000,65.67251461988305,24.859649122807017,1000000,1200000
+Defender,Depth/Youth (<70),England,422,575000,62.18957345971564,24.040284360189574,550000,625000
+Defender,Depth/Youth (<70),France,195,775000,63.01538461538462,23.456410256410255,700000,925000
+Defender,Depth/Youth (<70),Germany,284,725000,63.34507042253521,24.267605633802816,675000,825000
+Defender,Depth/Youth (<70),Spain,191,950000,64.49738219895288,23.963350785340314,875000,1000000
+Defender,Depth/Youth (<70),China PR,169,210000,58.35502958579882,27.497041420118343,190000,230000
+Goalkeeper,Depth/Youth (<70),England,138,337500,61.02173913043478,25.536231884057973,275000,425000
+Goalkeeper,Depth/Youth (<70),France,69,650000,62.81159420289855,24.55072463768116,425000,775000
+Goalkeeper,Depth/Youth (<70),Germany,134,475000,61.46268656716418,23.492537313432837,450000,525000
+Goalkeeper,Depth/Youth (<70),Italy,59,325000,61.3728813559322,25.54237288135593,210000,475000
+Goalkeeper,Depth/Youth (<70),Spain,73,875000,63.49315068493151,23.21917808219178,775000,975000
+Goalkeeper,Depth/Youth (<70),United States,61,275000,60.60655737704918,26.62295081967213,220000,350000

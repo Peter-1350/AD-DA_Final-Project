@@ -54,7 +54,10 @@ car::leveneTest(value ~ group, data = df)
 - 各组方差齐(Levene's test)
 - 独立性
 
-违反 → `kruskal.test()`(非参数替代)+ Dunn's post-hoc。
+违反方差齐性时，直接降级为非参数检验（Kruskal-Wallis）并非唯一方案，因为 KW 检验在方差不齐时检验的不再单纯是位置移动。
+推荐的处理准则：
+- **异方差但数据对称性良好**：使用 Welch's ANOVA (`oneway.test(..., var.equal = FALSE)`) + Games-Howell 事后检验。
+- **异方差且数据明显右偏**：不建议做秩和检验，推荐直接构建带有适当链接函数（如 Log 链接的 Gamma 分布）的广义线性模型 (GLM)，并通过 `car::Anova(fit, test="LR")` 执行方差分析。
 
 ### chisq.test() 的前提
 
@@ -173,8 +176,9 @@ cat(sprintf("p < 0.05, significant"))   # 没有效应量、没有 CI、没有 n
 
 比较 ≥3 组连续变量?
   ├─ 正态 + 方差齐 → aov() + TukeyHSD()
-  └─ 否则 → kruskal.test() + Dunn's post-hoc
-
+  ├─ 偏态/方差不齐但可转换 → oneway.test() + Games-Howell post-hoc
+  ├─ 极端右偏或严格正值 → 构建 GLM (如 Gamma) 并提取 emmeans 分析
+  └─ 仅关注整体分布和秩次结构 → kruskal.test() + Dunn's post-hoc
 比较两个分类变量?
   ├─ 期望频数 ≥ 5 → chisq.test()
   └─ 否则 → fisher.test()

@@ -1,11 +1,11 @@
 library(tidyverse)
 library(broom)
 library(performance)
-library(car)
-library(patchwork)
 library(scales)
+library(patchwork)
 library(viridis)
 library(naniar)
+library(stringr)
 
 `%||%` <- function(x, y) if (is.null(x)) y else x
 
@@ -31,19 +31,31 @@ save_poster_fig <- function(plot, path, width = 8, height = 6) {
   ggsave(path, plot = plot, width = width, height = height, dpi = 300)
 }
 
-read_value_position_data <- function() {
+prep_value_position <- function() {
   readr::read_csv(data_path, show_col_types = FALSE) %>%
-    rename_with(~ str_squish(.x)) %>%
     mutate(
       value_eur = `Value(in Euro)`,
       wage_eur = `Wage(in Euro)`,
-      age = Age,
       overall = Overall,
       potential = Potential,
       total_stats = TotalStats,
       base_stats = BaseStats,
+      age = Age,
+      height_cm = `Height(in cm)`,
+      weight_kg = `Weight(in kg)`,
+      known_as = str_squish(`Known As`),
+      full_name = str_squish(`Full Name`),
       best_position = str_squish(`Best Position`),
-      best_position = factor(best_position),
+      positions_played = str_squish(`Positions Played`),
+      nationality = str_squish(Nationality),
+      club_name = str_squish(`Club Name`),
+      preferred_foot = str_squish(`Preferred Foot`),
+      pace_total = `Pace Total`,
+      shooting_total = `Shooting Total`,
+      passing_total = `Passing Total`,
+      dribbling_total = `Dribbling Total`,
+      defending_total = `Defending Total`,
+      physicality_total = `Physicality Total`,
       position_group = case_when(
         best_position %in% c("ST", "LW", "RW", "CF", "LF", "RF", "CAM") ~ "Attack",
         best_position %in% c("CM", "CDM", "RM", "LM", "RWB", "LWB") ~ "Midfield",
@@ -52,23 +64,10 @@ read_value_position_data <- function() {
         TRUE ~ "Other"
       ),
       position_group = factor(position_group, levels = c("Attack", "Midfield", "Defense", "GK", "Other")),
-      best_position = factor(best_position),
-      pace_total = `Pace Total`,
-      shooting_total = `Shooting Total`,
-      passing_total = `Passing Total`,
-      dribbling_total = `Dribbling Total`,
-      defending_total = `Defending Total`,
-      physicality_total = `Physicality Total`,
-      log_value = log10(value_eur + 1),
-      age_z = as.numeric(scale(age)),
-      total_stats_z = as.numeric(scale(total_stats)),
-      pace_z = as.numeric(scale(pace_total)),
-      shooting_z = as.numeric(scale(shooting_total)),
-      passing_z = as.numeric(scale(passing_total)),
-      dribbling_z = as.numeric(scale(dribbling_total)),
-      defending_z = as.numeric(scale(defending_total)),
-      physicality_z = as.numeric(scale(physicality_total))
+      preferred_foot = factor(preferred_foot, levels = c("Left", "Right")),
+      log_value = log10(value_eur + 1)
     )
 }
 
-value_df <- read_value_position_data()
+value_df <- prep_value_position()
+

@@ -1,14 +1,14 @@
-variable,missing_n
+variable,missing
 value_eur,0
 wage_eur,0
-age,0
 overall,0
 potential,0
 total_stats,0
+age,0
 pace_total,0
 shooting_total,0
 passing_total,0
 dribbling_total,0
 defending_total,0
 physicality_total,0
-best_position,0
+position_group,0

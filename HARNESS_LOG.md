@@ -376,3 +376,28 @@ Codex 对假设检验的前提决策树过于死板，认为“不满足方差�
 
 **Verified**：
 修改后分析能够按逻辑改进分析方法，得到了一定提升。
+## Entry 13 — 2026-06-24 — 潘桂轩
+
+**Observed**：
+新一轮 agent 回归到使用 `best_position`（15 个单独位置）替代 `position_group`（4 组分类）建模，且未排除零身价球员。n = 17,524（含 98 个零值），adj. R² = 0.450（上一轮排除零值后为 0.668）。
+
+**Diagnosis**：
+READM E 中两类指令不够明确：
+1. `position_group` vs `best_position`：README 说"不同位置组"但没有指明变量名，`00_setup.R` 同时定义了两个变量，agent 选择了更细粒度的 `best_position`。
+2. 零值处理：README 只说"先处理 0 值"，agent 理解为 `log10(value + 1)` 而非 `filter(value_eur > 0)`。
+
+**Fix decided at layer**：
+- `data/Value_on_Position/README.md`
+
+**Why this layer**：
+同样是研究设计规格问题——位置分组方式和零值过滤策略属于数据集层面的刚性约束，不应依赖 agent 自行判断。修改 README 是唯一直接生效的层。
+
+**Change**：
+1. EDA 段：明确要求使用 `position_group`（4 组），禁止使用 `best_position`（15 个单独位置）
+2. 所有模型公式：从 `Position` 占位符改为具体变量名 `position_group` + `_z` 标准化变量
+3. 零值处理提示：从"先处理 0 值"改为"建模前必须排除：`filter(value_eur > 0)`"，并解释 `log10(value+1)` 不能消除地板效应
+4. 统计注意事项：`position_group` 项指定了变量名，禁止使用 `best_position`
+5. 分位置模型：改为"对四个 `position_group` 分别拟合"，使用标准化变量
+
+**Verified**：
+README 文本修改完成。下一轮 agent 读到此 README 后，模型公式中的变量名已是确切的 `position_group` + `_z`，零值过滤指令为可执行的代码片段。

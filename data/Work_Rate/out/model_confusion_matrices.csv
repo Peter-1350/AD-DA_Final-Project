@@ -1,7 +1,7 @@
 truth,predicted,n,outcome,share
-High,High,1494,Attacking work rate,0.09602159521820168
+High,High,1495,Attacking work rate,0.0960858667009448
 High,Low,0,Attacking work rate,0
-High,Medium,3676,Attacking work rate,0.2362619705636609
+High,Medium,3675,Attacking work rate,0.23619769908091778
 Low,High,22,Attacking work rate,0.0014139726203483513
 Low,Low,7,Attacking work rate,4.4990037920174817e-4
 Low,Medium,799,Attacking work rate,0.0513529147117424

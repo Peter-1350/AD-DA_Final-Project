@@ -1,177 +1,128 @@
 source(file.path("data", "Value_on_Position", "out", "scripts", "00_setup.R"))
 
-model_df <- value_df %>%
-  filter(!is.na(best_position)) %>%
-  mutate(best_position = fct_drop(best_position))
+diag_df <- value_df %>%
+  filter(value_eur > 0) %>%
+  mutate(
+    position_group = fct_drop(position_group),
+    age_z = as.numeric(scale(age)),
+    total_stats_z = as.numeric(scale(total_stats)),
+    pace_z = as.numeric(scale(pace_total)),
+    shooting_z = as.numeric(scale(shooting_total)),
+    passing_z = as.numeric(scale(passing_total)),
+    dribbling_z = as.numeric(scale(dribbling_total)),
+    defending_z = as.numeric(scale(defending_total)),
+    physicality_z = as.numeric(scale(physicality_total))
+  )
 
 fit_main <- lm(
-  log_value ~ best_position + age_z + total_stats_z + pace_z + shooting_z + passing_z +
-    dribbling_z + defending_z + physicality_z,
-  data = model_df
+  log_value ~ position_group + age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z,
+  data = diag_df
 )
 
-fit_interaction <- lm(
-  log_value ~ best_position * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) +
-    age_z + total_stats_z,
-  data = model_df
+fit_int <- lm(
+  log_value ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z,
+  data = diag_df
 )
 
-diag_main_df <- tibble(
-  fitted = fitted(fit_main),
-  residual = resid(fit_main),
-  std_resid = rstandard(fit_main),
-  leverage = hatvalues(fit_main),
-  cooks = cooks.distance(fit_main)
-)
-
-diag_int_df <- tibble(
-  fitted = fitted(fit_interaction),
-  residual = resid(fit_interaction),
-  std_resid = rstandard(fit_interaction),
-  leverage = hatvalues(fit_interaction),
-  cooks = cooks.distance(fit_interaction)
-)
-
-main_diag_tbl <- tibble(
-  metric = c("Normality p", "Heteroscedasticity p", "Max VIF", "Influential points"),
-  value = c(
-    tryCatch(shapiro.test(sample(resid(fit_main), min(length(resid(fit_main)), 5000)))$p.value, error = function(e) NA_real_),
-    tryCatch(car::ncvTest(fit_main)$p, error = function(e) NA_real_),
-    tryCatch(max(performance::check_collinearity(fit_main)$VIF, na.rm = TRUE), error = function(e) NA_real_),
-    tryCatch(sum(abs(rstudent(fit_main)) > 3, na.rm = TRUE), error = function(e) NA_real_)
-  )
-)
-
-int_diag_tbl <- tibble(
-  metric = c("Normality p", "Heteroscedasticity p", "Max VIF", "Influential points"),
-  value = c(
-    tryCatch(shapiro.test(sample(resid(fit_interaction), min(length(resid(fit_interaction)), 5000)))$p.value, error = function(e) NA_real_),
-    tryCatch(car::ncvTest(fit_interaction)$p, error = function(e) NA_real_),
-    tryCatch(max(performance::check_collinearity(fit_interaction)$VIF, na.rm = TRUE), error = function(e) NA_real_),
-    tryCatch(sum(abs(rstudent(fit_interaction)) > 3, na.rm = TRUE), error = function(e) NA_real_)
-  )
-)
-
-write_csv(main_diag_tbl, file.path(out_dir, "model_diagnostics_main.csv"))
-write_csv(int_diag_tbl, file.path(out_dir, "model_diagnostics_interaction.csv"))
-
-diag_pairs <- model_df %>%
+main_aug <- broom::augment(fit_main) %>%
   mutate(
-    fitted = fitted(fit_interaction),
-    residual = resid(fit_interaction),
-    std_resid = rstandard(fit_interaction),
-    leverage = hatvalues(fit_interaction),
-    cooks = cooks.distance(fit_interaction)
+    std_resid = rstandard(fit_main),
+    leverage = hatvalues(fit_main),
+    cooks = cooks.distance(fit_main),
+    sqrt_abs_std_resid = sqrt(abs(std_resid))
   )
 
-p_resid <- ggplot(diag_pairs, aes(x = fitted, y = residual)) +
+int_aug <- broom::augment(fit_int) %>%
+  mutate(
+    std_resid = rstandard(fit_int),
+    leverage = hatvalues(fit_int),
+    cooks = cooks.distance(fit_int),
+    sqrt_abs_std_resid = sqrt(abs(std_resid))
+  )
+
+main_diag_panel <- (
+  ggplot(main_aug, aes(sample = std_resid)) +
+    stat_qq(alpha = 0.3, size = 0.55, color = viridis(1, option = "D")) +
+    stat_qq_line(color = "firebrick", linewidth = 0.8) +
+    labs(title = "Normal Q-Q", x = "Theoretical quantiles", y = "Standardized residuals")
+) | (
+  ggplot(main_aug, aes(x = .fitted, y = .resid)) +
+    geom_point(alpha = 0.22, size = 0.6, color = viridis(1, option = "D")) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+    geom_smooth(se = FALSE, color = "firebrick", linewidth = 0.8) +
+    labs(title = "Residuals vs fitted", x = "Fitted log10(value + 1)", y = "Residual")
+) / (
+  ggplot(main_aug, aes(x = .fitted, y = sqrt_abs_std_resid)) +
+    geom_point(alpha = 0.22, size = 0.6, color = viridis(1, option = "D")) +
+    geom_smooth(se = FALSE, color = "firebrick", linewidth = 0.8) +
+    labs(title = "Scale-location", x = "Fitted log10(value + 1)", y = "Sqrt(|standardized residual|)")
+) | (
+  ggplot(main_aug, aes(x = leverage, y = std_resid)) +
+    geom_point(aes(size = cooks), alpha = 0.3, color = viridis(1, option = "D")) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+    scale_size_continuous(range = c(0.5, 4), guide = "none") +
+    labs(title = "Leverage vs residuals", x = "Leverage", y = "Standardized residuals")
+)
+save_poster_fig(main_diag_panel, file.path(fig_dir, "fig_model_diagnostics_main.png"), width = 12, height = 9)
+
+int_diag_panel <- (
+  ggplot(int_aug, aes(sample = std_resid)) +
+    stat_qq(alpha = 0.3, size = 0.55, color = viridis(1, option = "C")) +
+    stat_qq_line(color = "firebrick", linewidth = 0.8) +
+    labs(title = "Normal Q-Q", x = "Theoretical quantiles", y = "Standardized residuals")
+) | (
+  ggplot(int_aug, aes(x = .fitted, y = .resid)) +
+    geom_point(alpha = 0.22, size = 0.6, color = viridis(1, option = "C")) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+    geom_smooth(se = FALSE, color = "firebrick", linewidth = 0.8) +
+    labs(title = "Residuals vs fitted", x = "Fitted log10(value + 1)", y = "Residual")
+) / (
+  ggplot(int_aug, aes(x = .fitted, y = sqrt_abs_std_resid)) +
+    geom_point(alpha = 0.22, size = 0.6, color = viridis(1, option = "C")) +
+    geom_smooth(se = FALSE, color = "firebrick", linewidth = 0.8) +
+    labs(title = "Scale-location", x = "Fitted log10(value + 1)", y = "Sqrt(|standardized residual|)")
+) | (
+  ggplot(int_aug, aes(x = leverage, y = std_resid)) +
+    geom_point(aes(size = cooks), alpha = 0.3, color = viridis(1, option = "C")) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
+    scale_size_continuous(range = c(0.5, 4), guide = "none") +
+    labs(title = "Leverage vs residuals", x = "Leverage", y = "Standardized residuals")
+)
+save_poster_fig(int_diag_panel, file.path(fig_dir, "fig_model_diagnostics_interaction.png"), width = 12, height = 9)
+
+p_main_resid <- ggplot(main_aug, aes(x = .fitted, y = .resid)) +
+  geom_point(alpha = 0.22, size = 0.6, color = viridis(1, option = "D")) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-  geom_point(alpha = 0.22, size = 0.8, color = viridis(1, option = "D")) +
+  geom_smooth(se = FALSE, color = "firebrick", linewidth = 0.8) +
   labs(
-    title = "Residuals vs fitted values show no obvious curvature",
-    subtitle = "Interaction model on log10(value + 1) scale",
+    title = "Residuals vs fitted for the main model",
+    subtitle = "Positive residuals indicate observed value above fitted value",
     x = "Fitted log10(value + 1)",
     y = "Residual"
   )
-save_poster_fig(p_resid, file.path(fig_dir, "fig_model_residuals_main.png"), width = 8.5, height = 6)
+save_poster_fig(p_main_resid, file.path(fig_dir, "fig_model_residuals_main.png"), width = 8.5, height = 6)
 
-p_leverage <- ggplot(diag_pairs, aes(x = leverage, y = std_resid)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-  geom_point(alpha = 0.25, size = 0.8, color = viridis(1, option = "C")) +
+p_main_qq <- ggplot(main_aug, aes(sample = std_resid)) +
+  stat_qq(alpha = 0.3, size = 0.55, color = viridis(1, option = "D")) +
+  stat_qq_line(color = "firebrick", linewidth = 0.8) +
   labs(
-    title = "Influential points are concentrated at the high-leverage tail",
-    subtitle = "Standardized residuals against leverage for the interaction model",
-    x = "Leverage",
-    y = "Standardized residual"
+    title = "Normal Q-Q for the main model",
+    x = "Theoretical quantiles",
+    y = "Standardized residuals"
   )
-save_poster_fig(p_leverage, file.path(fig_dir, "fig_model_influence_main.png"), width = 8.5, height = 6)
+save_poster_fig(p_main_qq, file.path(fig_dir, "fig_model_qq_main.png"), width = 8, height = 6)
 
-p_diag_main <- (
-  ggplot(diag_main_df, aes(x = fitted, y = residual)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-    geom_point(alpha = 0.22, size = 0.8, color = viridis(1, option = "D")) +
-    labs(
-      title = "Main model: residuals vs fitted",
-      subtitle = "Look for curvature or changing spread",
-      x = "Fitted log10(value + 1)",
-      y = "Residual"
-    )
-) / (
-  ggplot(data.frame(sample = resid(fit_main)), aes(sample = sample)) +
-    stat_qq(alpha = 0.3, size = 0.8, color = viridis(1, option = "C")) +
-    stat_qq_line(color = "firebrick") +
-    labs(
-      title = "Main model: Q-Q plot",
-      subtitle = "Approximate normality is acceptable after the log transform",
-      x = "Theoretical quantiles",
-      y = "Sample quantiles"
-    )
-) / (
-  ggplot(diag_main_df, aes(x = leverage, y = std_resid)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-    geom_point(alpha = 0.25, size = 0.8, color = viridis(1, option = "B")) +
-    labs(
-      title = "Main model: leverage vs standardized residuals",
-      subtitle = "High leverage points deserve sensitivity checks",
-      x = "Leverage",
-      y = "Standardized residual"
-    )
-) / (
-  ggplot(diag_main_df %>% arrange(desc(cooks)) %>% slice_head(n = 20) %>%
-           mutate(obs = row_number()),
-         aes(x = reorder(as.factor(obs), cooks), y = cooks)) +
-    geom_col(fill = viridis(1, option = "D"), alpha = 0.85) +
-    coord_flip() +
-    labs(
-      title = "Main model: top Cook's distance observations",
-      subtitle = "Largest 20 observations by influence",
-      x = "Observation",
-      y = "Cook's distance"
-    )
-)
-save_poster_fig(p_diag_main, file.path(fig_dir, "fig_model_diagnostics_main.png"), width = 11, height = 12)
+vif_main <- performance::check_collinearity(fit_main) %>% as.data.frame()
+vif_int <- performance::check_collinearity(fit_int) %>% as.data.frame()
+write_csv(vif_main, file.path(out_dir, "model_collinearity_main.csv"))
+write_csv(vif_int, file.path(out_dir, "model_collinearity_interaction.csv"))
 
-p_diag_int <- (
-  ggplot(diag_int_df, aes(x = fitted, y = residual)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-    geom_point(alpha = 0.22, size = 0.8, color = viridis(1, option = "D")) +
-    labs(
-      title = "Interaction model: residuals vs fitted",
-      subtitle = "Look for curvature or changing spread",
-      x = "Fitted log10(value + 1)",
-      y = "Residual"
-    )
-) / (
-  ggplot(data.frame(sample = resid(fit_interaction)), aes(sample = sample)) +
-    stat_qq(alpha = 0.3, size = 0.8, color = viridis(1, option = "C")) +
-    stat_qq_line(color = "firebrick") +
-    labs(
-      title = "Interaction model: Q-Q plot",
-      subtitle = "Approximate normality is acceptable after the log transform",
-      x = "Theoretical quantiles",
-      y = "Sample quantiles"
-    )
-) / (
-  ggplot(diag_int_df, aes(x = leverage, y = std_resid)) +
-    geom_hline(yintercept = 0, linetype = "dashed", color = "grey55") +
-    geom_point(alpha = 0.25, size = 0.8, color = viridis(1, option = "B")) +
-    labs(
-      title = "Interaction model: leverage vs standardized residuals",
-      subtitle = "High leverage points deserve sensitivity checks",
-      x = "Leverage",
-      y = "Standardized residual"
-    )
-) / (
-  ggplot(diag_int_df %>% arrange(desc(cooks)) %>% slice_head(n = 20) %>%
-           mutate(obs = row_number()),
-         aes(x = reorder(as.factor(obs), cooks), y = cooks)) +
-    geom_col(fill = viridis(1, option = "D"), alpha = 0.85) +
-    coord_flip() +
-    labs(
-      title = "Interaction model: top Cook's distance observations",
-      subtitle = "Largest 20 observations by influence",
-      x = "Observation",
-      y = "Cook's distance"
-    )
+diag_summary <- tibble(
+  model = c("main", "interaction"),
+  n = c(nobs(fit_main), nobs(fit_int)),
+  adj_r2 = c(broom::glance(fit_main)$adj.r.squared, broom::glance(fit_int)$adj.r.squared),
+  aic = c(AIC(fit_main), AIC(fit_int)),
+  max_vif = c(max(vif_main$VIF, na.rm = TRUE), max(vif_int$VIF, na.rm = TRUE)),
+  max_cooks = c(max(cooks.distance(fit_main), na.rm = TRUE), max(cooks.distance(fit_int), na.rm = TRUE))
 )
-save_poster_fig(p_diag_int, file.path(fig_dir, "fig_model_diagnostics_interaction.png"), width = 11, height = 12)
+write_csv(diag_summary, file.path(out_dir, "model_diagnostics_summary.csv"))

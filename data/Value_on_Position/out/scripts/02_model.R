@@ -1,186 +1,182 @@
 source(file.path("data", "Value_on_Position", "out", "scripts", "00_setup.R"))
 
 model_df <- value_df %>%
-  filter(!is.na(best_position)) %>%
+  filter(value_eur > 0) %>%
   mutate(
-    best_position = fct_drop(best_position),
-    best_position = fct_relevel(best_position, "GK"),
-    value_positive = value_eur > 0
+    position_group = fct_drop(position_group),
+    age_z = as.numeric(scale(age)),
+    total_stats_z = as.numeric(scale(total_stats)),
+    pace_z = as.numeric(scale(pace_total)),
+    shooting_z = as.numeric(scale(shooting_total)),
+    passing_z = as.numeric(scale(passing_total)),
+    dribbling_z = as.numeric(scale(dribbling_total)),
+    defending_z = as.numeric(scale(defending_total)),
+    physicality_z = as.numeric(scale(physicality_total))
   )
 
+skill_z <- c("pace_z", "shooting_z", "passing_z", "dribbling_z", "defending_z", "physicality_z")
+
 fit_main <- lm(
-  log_value ~ best_position + age_z + total_stats_z + pace_z + shooting_z + passing_z +
-    dribbling_z + defending_z + physicality_z,
+  log_value ~ position_group + age_z + total_stats_z + pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z,
   data = model_df
 )
 
-fit_interaction <- lm(
-  log_value ~ best_position * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) +
-    age_z + total_stats_z,
+fit_int <- lm(
+  log_value ~ position_group * (pace_z + shooting_z + passing_z + dribbling_z + defending_z + physicality_z) + age_z + total_stats_z,
   data = model_df
 )
 
 coef_main <- broom::tidy(fit_main, conf.int = TRUE)
 glance_main <- broom::glance(fit_main)
-coef_int <- broom::tidy(fit_interaction, conf.int = TRUE)
-glance_int <- broom::glance(fit_interaction)
-
-vif_main <- performance::check_collinearity(fit_main) %>% as.data.frame()
-vif_int <- performance::check_collinearity(fit_interaction) %>% as.data.frame()
+coef_int <- broom::tidy(fit_int, conf.int = TRUE)
+glance_int <- broom::glance(fit_int)
 
 write_csv(coef_main, file.path(out_dir, "model_coefficients_main.csv"))
 write_csv(glance_main, file.path(out_dir, "model_glance_main.csv"))
-write_csv(vif_main, file.path(out_dir, "model_collinearity_main.csv"))
 write_csv(coef_int, file.path(out_dir, "model_coefficients_interaction.csv"))
 write_csv(glance_int, file.path(out_dir, "model_glance_interaction.csv"))
+
+vif_main <- performance::check_collinearity(fit_main) %>% as.data.frame()
+vif_int <- performance::check_collinearity(fit_int) %>% as.data.frame()
+write_csv(vif_main, file.path(out_dir, "model_collinearity_main.csv"))
 write_csv(vif_int, file.path(out_dir, "model_collinearity_interaction.csv"))
 
-main_pred <- model_df %>%
+model_df <- model_df %>%
   mutate(
-    fitted = predict(fit_main, newdata = model_df),
-    residual = resid(fit_main),
-    std_resid = rstandard(fit_main),
-    leverage = hatvalues(fit_main),
-    cooks = cooks.distance(fit_main)
+    fitted_main = fitted(fit_main),
+    resid_main = resid(fit_main),
+    fitted_int = fitted(fit_int),
+    resid_int = resid(fit_int)
   )
 
-int_pred <- model_df %>%
+p_main_coef <- coef_main %>%
+  filter(term != "(Intercept)") %>%
   mutate(
-    fitted = predict(fit_interaction, newdata = model_df),
-    residual = resid(fit_interaction),
-    std_resid = rstandard(fit_interaction),
-    leverage = hatvalues(fit_interaction),
-    cooks = cooks.distance(fit_interaction)
+    term = recode(term,
+                  position_groupDefense = "Defense vs Attack",
+                  position_groupGK = "GK vs Attack",
+                  position_groupMidfield = "Midfield vs Attack",
+                  age_z = "Age (z)",
+                  total_stats_z = "Total stats (z)",
+                  pace_z = "Pace (z)",
+                  shooting_z = "Shooting (z)",
+                  passing_z = "Passing (z)",
+                  dribbling_z = "Dribbling (z)",
+                  defending_z = "Defending (z)",
+                  physicality_z = "Physicality (z)"),
+    term = fct_reorder(term, estimate)
+  ) %>%
+  ggplot(aes(x = estimate, y = term)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.2, color = "grey40") +
+  geom_point(size = 2.8, color = viridis(1, option = "D")) +
+  labs(
+    title = "Overall associations with player value",
+    subtitle = sprintf("n = %d, adj. R² = %.3f", nobs(fit_main), glance_main$adj.r.squared),
+    x = "Coefficient estimate on log10(value + 1)",
+    y = NULL
   )
+save_poster_fig(p_main_coef, file.path(fig_dir, "fig_model_coefficients_main.png"), width = 10, height = 6.5)
 
-write_csv(
-  main_pred %>%
-    select(`Known As`, `Full Name`, best_position, age, overall, total_stats, value_eur, fitted, residual, std_resid, leverage, cooks) %>%
-    arrange(desc(abs(residual))) %>%
-    slice_head(n = 200),
-  file.path(out_dir, "model_main_residuals_top.csv")
-)
+p_int_coef <- coef_int %>%
+  filter(term != "(Intercept)") %>%
+  mutate(
+    term = recode(term,
+                  position_groupDefense = "Defense vs Attack",
+                  position_groupGK = "GK vs Attack",
+                  position_groupMidfield = "Midfield vs Attack",
+                  `position_groupDefense:pace_z` = "Defense × Pace",
+                  `position_groupGK:pace_z` = "GK × Pace",
+                  `position_groupMidfield:pace_z` = "Midfield × Pace",
+                  `position_groupDefense:shooting_z` = "Defense × Shooting",
+                  `position_groupGK:shooting_z` = "GK × Shooting",
+                  `position_groupMidfield:shooting_z` = "Midfield × Shooting",
+                  `position_groupDefense:passing_z` = "Defense × Passing",
+                  `position_groupGK:passing_z` = "GK × Passing",
+                  `position_groupMidfield:passing_z` = "Midfield × Passing",
+                  `position_groupDefense:dribbling_z` = "Defense × Dribbling",
+                  `position_groupGK:dribbling_z` = "GK × Dribbling",
+                  `position_groupMidfield:dribbling_z` = "Midfield × Dribbling",
+                  `position_groupDefense:defending_z` = "Defense × Defending",
+                  `position_groupGK:defending_z` = "GK × Defending",
+                  `position_groupMidfield:defending_z` = "Midfield × Defending",
+                  `position_groupDefense:physicality_z` = "Defense × Physicality",
+                  `position_groupGK:physicality_z` = "GK × Physicality",
+                  `position_groupMidfield:physicality_z` = "Midfield × Physicality",
+                  age_z = "Age (z)",
+                  total_stats_z = "Total stats (z)"),
+    term = fct_reorder(term, estimate)
+  ) %>%
+  ggplot(aes(x = estimate, y = term)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.2, color = "grey40") +
+  geom_point(size = 2.5, color = viridis(1, option = "C")) +
+  labs(
+    title = "Position-specific skill premiums differ",
+    subtitle = sprintf("Interaction model; adj. R² = %.3f", glance_int$adj.r.squared),
+    x = "Coefficient estimate on log10(value + 1)",
+    y = NULL
+  )
+save_poster_fig(p_int_coef, file.path(fig_dir, "fig_model_interaction_terms.png"), width = 11.5, height = 8.5)
 
-write_csv(
-  int_pred %>%
-    select(`Known As`, `Full Name`, best_position, age, overall, total_stats, value_eur, fitted, residual, std_resid, leverage, cooks) %>%
-    arrange(desc(abs(residual))) %>%
-    slice_head(n = 200),
-  file.path(out_dir, "model_interaction_residuals_top.csv")
-)
-
-skill_levels <- c("pace_z", "shooting_z", "passing_z", "dribbling_z", "defending_z", "physicality_z")
-skill_labels <- c(
-  pace_z = "Pace",
-  shooting_z = "Shooting",
-  passing_z = "Passing",
-  dribbling_z = "Dribbling",
-  defending_z = "Defending",
-  physicality_z = "Physicality"
-)
-
-coef_names <- names(coef(fit_interaction))
-vc <- vcov(fit_interaction)
-
-position_slopes <- map_dfr(skill_levels, function(skill) {
-  position_levels <- levels(model_df$best_position)
-  map_dfr(position_levels, function(pos) {
-    est <- coef(fit_interaction)[[skill]]
-    var <- vc[skill, skill]
-    if (pos != "GK") {
-      term <- paste0("best_position", pos, ":", skill)
-      term2 <- paste0(skill, ":best_position", pos)
-      if (term %in% coef_names) {
-        est <- est + coef(fit_interaction)[[term]]
-        var <- vc[skill, skill] + vc[term, term] + 2 * vc[skill, term]
-      } else if (term2 %in% coef_names) {
-        est <- est + coef(fit_interaction)[[term2]]
-        var <- vc[skill, skill] + vc[term2, term2] + 2 * vc[skill, term2]
+get_total_slopes <- function(fit, skill, positions = c("Attack", "Midfield", "Defense", "GK")) {
+  beta <- coef(fit)
+  vc <- vcov(fit)
+  pos_terms <- c(
+    Attack = skill,
+    Midfield = paste0("position_groupMidfield:", skill),
+    Defense = paste0("position_groupDefense:", skill),
+    GK = paste0("position_groupGK:", skill)
+  )
+  map_dfr(positions, function(pos) {
+    terms <- c(skill, pos_terms[[pos]])
+    est <- sum(beta[intersect(names(beta), terms)])
+    var <- 0
+    for (i in seq_along(terms)) {
+      for (j in seq_along(terms)) {
+        ti <- terms[i]
+        tj <- terms[j]
+        if (ti %in% names(beta) && tj %in% names(beta)) {
+          var <- var + vc[ti, tj]
+        }
       }
     }
     se <- sqrt(var)
     tibble(
-      best_position = pos,
-      skill = skill_labels[[skill]],
+      position_group = pos,
+      term = skill,
       estimate = est,
-      conf.low = est - 1.96 * se,
-      conf.high = est + 1.96 * se
+      std.error = se,
+      conf.low = est - qt(0.975, df.residual(fit)) * se,
+      conf.high = est + qt(0.975, df.residual(fit)) * se
     )
   })
-})
+}
 
-write_csv(position_slopes, file.path(out_dir, "model_position_skill_slopes.csv"))
-
-p_main_coef <- coef_main %>%
-  filter(term != "(Intercept)") %>%
-  mutate(term = dplyr::recode(term,
-    best_positionCB = "CB vs GK",
-    best_positionCAM = "CAM vs GK",
-    best_positionCDM = "CDM vs GK",
-    best_positionCM = "CM vs GK",
-    best_positionLB = "LB vs GK",
-    best_positionLW = "LW vs GK",
-    best_positionLM = "LM vs GK",
-    best_positionLWB = "LWB vs GK",
-    best_positionRB = "RB vs GK",
-    best_positionRM = "RM vs GK",
-    best_positionRWB = "RWB vs GK",
-    best_positionRW = "RW vs GK",
-    best_positionST = "ST vs GK",
-    best_positionCF = "CF vs GK",
-    age_z = "Age (z)",
-    total_stats_z = "Total stats (z)",
-    pace_z = "Pace (z)",
-    shooting_z = "Shooting (z)",
-    passing_z = "Passing (z)",
-    dribbling_z = "Dribbling (z)",
-    defending_z = "Defending (z)",
-    physicality_z = "Physicality (z)"
-  )) %>%
-  ggplot(aes(x = estimate, y = fct_reorder(term, estimate))) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
-  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.2, color = "grey45") +
-  geom_point(size = 2.8, color = viridis(1, option = "D")) +
-  labs(
-    title = "Skill premiums remain positive after controlling for position",
-    subtitle = sprintf("Main-effects model; adj. R² = %.3f; n = %d", glance_main$adj.r.squared, nobs(fit_main)),
-    x = "Coefficient estimate on log10(value + 1)",
-    y = NULL
-  )
-save_poster_fig(p_main_coef, file.path(fig_dir, "fig_model_coefficients_main.png"), width = 10, height = 8)
-
-p_int_skill <- position_slopes %>%
+slopes_tbl <- map_dfr(skill_z, ~ get_total_slopes(fit_int, .x))
+slopes_tbl <- slopes_tbl %>%
   mutate(
+    skill = recode(term,
+                   pace_z = "Pace",
+                   shooting_z = "Shooting",
+                   passing_z = "Passing",
+                   dribbling_z = "Dribbling",
+                   defending_z = "Defending",
+                   physicality_z = "Physicality"),
     skill = factor(skill, levels = c("Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality")),
-    best_position = fct_relevel(best_position, "GK")
-  ) %>%
-  ggplot(aes(x = estimate, y = skill)) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
-  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), height = 0.15, color = "grey45") +
-  geom_point(size = 2.4, color = viridis(1, option = "D")) +
-  facet_wrap(~best_position, nrow = 2) +
-  labs(
-    title = "Skill slopes differ by position",
-    subtitle = sprintf("Total slopes from interaction model; adj. R² = %.3f; n = %d", glance_int$adj.r.squared, nobs(fit_interaction)),
-    x = "Slope on log10(value + 1) per 1 SD increase",
-    y = NULL
+    position_group = factor(position_group, levels = c("Attack", "Midfield", "Defense", "GK"))
   )
-save_poster_fig(p_int_skill, file.path(fig_dir, "fig_model_slopes_by_position.png"), width = 14, height = 8)
+write_csv(slopes_tbl, file.path(out_dir, "model_slopes_by_position.csv"))
 
-p_int_terms <- coef_int %>%
-  filter(str_detect(term, ":") | term %in% c(
-    "pace_z", "shooting_z", "passing_z", "dribbling_z", "defending_z", "physicality_z"
-  )) %>%
-  mutate(term = str_replace(term, "best_position", "Position: "),
-         term = str_replace(term, "_z", " (z)")) %>%
-  ggplot(aes(x = estimate, y = fct_reorder(term, estimate))) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey55") +
-  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), orientation = "y", width = 0.15, color = "grey45") +
-  geom_point(size = 2.3, color = viridis(1, option = "C")) +
+p_slopes <- ggplot(slopes_tbl, aes(x = estimate, y = skill)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "grey60") +
+  geom_errorbar(aes(xmin = conf.low, xmax = conf.high), width = 0.15, color = "grey40") +
+  geom_point(size = 2.7, color = viridis(1, option = "D")) +
+  facet_wrap(~ position_group, nrow = 1) +
   labs(
-    title = "Interaction terms are harder to parse than total slopes",
-    subtitle = "Use the slope-by-position figure for poster interpretation",
-    x = "Coefficient estimate",
+    title = "Skill-value slopes differ by position",
+    subtitle = "Total slopes from the interaction model with 95% confidence intervals",
+    x = "Slope on log10(value + 1)",
     y = NULL
   )
-save_poster_fig(p_int_terms, file.path(fig_dir, "fig_model_interaction_terms.png"), width = 11, height = 8)
+save_poster_fig(p_slopes, file.path(fig_dir, "fig_model_slopes_by_position.png"), width = 14, height = 5.5)

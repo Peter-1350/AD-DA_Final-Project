@@ -1,6 +1,0 @@
-position_group,ability_tier,.y..x,n.x,statistic,df,p,method.x,.y..y,n.y,effsize,conf.low,conf.high,method.y,magnitude
-Forward,Depth/Youth (<70),log_value,704,103.24717277426586,5,1.09e-20,Kruskal-Wallis,log_value,704,0.14075526185424908,0.1,0.19,eta2[H],large
-Midfielder,Depth/Youth (<70),log_value,1543,236.28421820279786,5,4.81e-49,Kruskal-Wallis,log_value,1543,0.15047769564267915,0.12,0.19,eta2[H],large
-Midfielder,Regular (70-77),log_value,686,10.797629376548443,5,0.0555,Kruskal-Wallis,log_value,686,0.00852592555374771,-8.5e-4,0.04,eta2[H],small
-Defender,Depth/Youth (<70),log_value,1432,360.14512359347344,5,1.14e-75,Kruskal-Wallis,log_value,1432,0.24904987629275838,0.21,0.29,eta2[H],large
-Goalkeeper,Depth/Youth (<70),log_value,534,69.6870916046183,5,1.19e-13,Kruskal-Wallis,log_value,534,0.12251343106935285,0.08,0.18,eta2[H],moderate

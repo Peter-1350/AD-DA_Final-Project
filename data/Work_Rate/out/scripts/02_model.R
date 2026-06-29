@@ -152,7 +152,7 @@ p_attack <- ggplot(attack_plot_tbl, aes(x = or, y = term)) +
   labs(
     title = "Adjusted associations with attacking work rate",
     subtitle = sprintf(
-      "Multinomial logit excluding goalkeepers; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
+      "Excluding goalkeepers; n = %d; acc = %.3f; pseudo-R2 = %.3f",
       nrow(model_df), metrics_tbl$accuracy[1], metrics_tbl$pseudo_r2[1]
     ),
     x = "Relative risk ratio [95% CI]",
@@ -174,7 +174,7 @@ p_defend <- ggplot(defend_plot_tbl, aes(x = or, y = term)) +
   labs(
     title = "Adjusted associations with defensive work rate",
     subtitle = sprintf(
-      "Multinomial logit excluding goalkeepers; n = %d; accuracy = %.3f; pseudo-R2 = %.3f",
+      "Excluding goalkeepers; n = %d; acc = %.3f; pseudo-R2 = %.3f",
       nrow(model_df), metrics_tbl$accuracy[2], metrics_tbl$pseudo_r2[2]
     ),
     x = "Relative risk ratio [95% CI]",

@@ -1,81 +1,95 @@
 # Analysis: FIFA 23 Players - Nationality and Market Value
 
 ## TL;DR
-- The usable analysis sample contains 17,426 positive-value FIFA 23 players after excluding 98 zero-value records; market value is extremely right-skewed, so analyses use log scale or Gamma log-link models.
-- Within same position and ability tiers, nationality remains associated with market value in large Depth/Youth strata; the Regular midfielder stratum shows weaker rank-test evidence.
-- Strongest rank-test evidence appears in Depth/Youth defenders (H = 360.1, p < .001, epsilon-squared = 0.249) and Depth/Youth forwards (H = 103.2, p < .001, epsilon-squared = 0.141).
-- The largest model-based nationality terms are local, baseline-dependent estimates and should be presented as sample associations, not causal premiums.
-- Age, potential, and total-stat covariates are large value correlates; the strongest poster claim should be about conditional association rather than nationality alone.
+- FIFA 23 market value is extremely right-skewed: median EUR 1.0M, IQR EUR 0.5M-EUR 2.0M, maximum EUR 190.5M; 98 zero-value boundary observations were excluded before modeling.
+- After matching broadly on best-position group and Overall tier, nationality differences were clearest among rotation-tier defenders and midfielders, not among rotation-tier forwards or starter-tier midfielders.
+- In rotation-tier defenders, Brazil had the highest adjusted mean value (EUR 3.64M [EUR 3.42M, EUR 3.87M]) and was 33% above Argentina after age and potential adjustment.
+- In rotation-tier midfielders, Brazil was also highest (EUR 4.31M [EUR 4.00M, EUR 4.63M]) and 25% above Argentina after age and potential adjustment.
+- The pooled controlled Gamma model showed small average nationality coefficients versus Spain (about -2% to -6% for the other selected nationalities), so the poster should emphasize cell-specific heterogeneity rather than a single global nationality ranking.
 
 ## Data
-- Source file: `data/FIFA 23 Players.csv`; raw size = 17,524 rows and 95 columns.
-- Main variables: `Value(in Euro)` as market value, `Nationality`, `Best Position`, `Overall`, `Potential`, `Age`, and `TotalStats`.
-- Data quality: `Value(in Euro)` has no missing values but includes 98 zero values (0.6%); these were excluded before log-scale analysis and Gamma modeling.
-- Positive market value remains skewed: median EUR 1M, IQR EUR 500K-EUR 2M.
-- The analysis uses specific nationalities within strata; it does not collapse nationality into broad continent or region categories.
-
-![](figs/fig_data_overview_counts.png)
+- Source file: `data/FIFA 23 Players.csv`; raw n = 17,524 rows and 89 columns.
+- Model sample: n = 17,426 after excluding 98 players with `Value(in Euro) == 0`; no missing values were found in the model fields used here.
+- Nationality is specific country/region text with 157 distinct levels in the full data. To avoid over-broad categories, the main comparisons use six concrete nationalities with adequate cell counts: Spain, Brazil, Argentina, France, England, Germany.
+- Position groups were derived from `Best Position`: Forward, Midfield, Defender, Goalkeeper. Ability tiers were based on `Overall`: Elite 85+, Starter 78-84, Rotation 70-77, Depth <70.
 
 ![](figs/fig_eda_value_distribution.png)
 
+![](figs/fig_eda_position_ability_cells.png)
+
 ## EDA
-- Players were stratified by four broad position groups and four ability tiers based on `Overall`: Depth/Youth (<70), Regular (70-77), Starter (78-84), and Elite (85+).
-- The most stable local comparisons are in the large Depth/Youth defender/forward strata; Regular midfielders are retained because the README specifically asked for same-position, same-ability local comparisons at more market-relevant ability levels.
+- Value has a long right tail, so raw-value ANOVA would be a poor default. The analysis uses Gamma GLM with log link for positive market values.
+- Most observations sit in the Rotation 70-77 and Depth <70 tiers. Elite cells are too sparse for stable nationality comparisons.
+- Selected poster cells: Midfield/Rotation 70-77, Defender/Rotation 70-77, Forward/Rotation 70-77, and Midfield/Starter 78-84. Argentina in Midfield/Starter 78-84 had n=19 and was dropped from the model for that cell; the remaining displayed cells had n >= 20 per nationality except no dropped groups in Forward/Rotation.
 
-![](figs/fig_strata_counts.png)
+![](figs/fig_eda_value_by_nationality_cells.png)
 
-## Main analysis
-- Method choice: because value is strictly positive after filtering and heavily right-skewed, the main conditional models use Gamma GLM with log link. For unadjusted within-stratum group comparisons, normality and equal-variance assumptions were checked first; violations led to Kruskal-Wallis tests and BH-adjusted Wilcoxon pairwise tests rather than ANOVA.
-- Group-comparison assumption checks: Shapiro tests on log value were frequently below .05 and Levene tests indicated unequal variance in some strata, so nonparametric rank tests are the primary group-comparison evidence.
-- Depth/Youth (<70) Forward: Kruskal-Wallis H(5) = 103.2, p < .001, epsilon-squared = 0.141.
-- Regular (70-77) Midfielder: Kruskal-Wallis H(5) = 10.8, p = 0.056, epsilon-squared = 0.009.
-- Depth/Youth (<70) Defender: Kruskal-Wallis H(5) = 360.1, p < .001, epsilon-squared = 0.249.
+## Main Analysis
+- Method: within each selected position-rating cell, fit `glm(value_eur ~ nationality + age + potential, family = Gamma(link = "log"))`. This compares multiplicative expected-value ratios while adjusting for age and potential within a local homogeneous cell.
+- Hypothesis-test choice: because value is strictly positive after cleaning and strongly right-skewed, Gamma(log) modeling is more aligned with the money-scale question than ordinary ANOVA or rank-only Kruskal-Wallis.
 
-![](figs/fig_regular_midfielder_value_by_nationality.png)
+Cell-level likelihood-ratio tests for nationality:
+- Midfield / Starter 78-84: LR chi-square(4)=2.19, p = 0.701, partial eta2=0.170.
+- Midfield / Rotation 70-77: LR chi-square(5)=20.02, p = 0.001, partial eta2=0.050.
+- Defender / Rotation 70-77: LR chi-square(5)=41.80, p < .001, partial eta2=0.123.
+- Forward / Rotation 70-77: LR chi-square(5)=3.68, p = 0.596, partial eta2=0.089.
 
-![](figs/fig_depth_defender_value_by_nationality.png)
+Highest adjusted means in the significant cells:
+- In Defender / Rotation 70-77, the highest adjusted mean was Brazil: EUR 3,642,304 [EUR 3,424,145, EUR 3,874,363].
+- In Midfield / Rotation 70-77, the highest adjusted mean was Brazil: EUR 4,307,026 [EUR 4,004,869, EUR 4,631,981].
 
-- Bootstrap median intervals show the scale of the observed gaps in euros:
-- Depth/Youth (<70) Defender: Argentina (median EUR 1M, 95% CI EUR 1M-EUR 1.2M); Spain (median EUR 950K, 95% CI EUR 875K-EUR 1.0M); France (median EUR 775K, 95% CI EUR 700K-EUR 925K)
-- Depth/Youth (<70) Forward: Spain (median EUR 1M, 95% CI EUR 975K-EUR 1.3M); France (median EUR 950K, 95% CI EUR 800K-EUR 1.2M); Argentina (median EUR 900K, 95% CI EUR 775K-EUR 1.1M)
-- Regular (70-77) Midfielder: England (median EUR 4.20M, 95% CI EUR 3.05M-EUR 5.5M); Spain (median EUR 3.60M, 95% CI EUR 3.40M-EUR 4.2M); France (median EUR 3.50M, 95% CI EUR 3.10M-EUR 3.8M)
+Largest Tukey-adjusted pairwise contrasts:
+- Defender / Rotation 70-77: Brazil / Argentina ratio 1.33 [1.16, 1.53], Tukey p < .001 (+33.2%).
+- Defender / Rotation 70-77: Brazil / France ratio 1.22 [1.06, 1.41], Tukey p = 0.001 (+21.9%).
+- Defender / Rotation 70-77: Brazil / England ratio 1.21 [1.05, 1.40], Tukey p = 0.002 (+21.2%).
+- Defender / Rotation 70-77: Argentina / Germany ratio 0.82 [0.70, 0.96], Tukey p = 0.004 (-18.3%).
+- Midfield / Rotation 70-77: Brazil / Argentina ratio 1.25 [1.08, 1.46], Tukey p < .001 (+25.4%).
 
-![](figs/fig_regular_median_value_ci.png)
+![](figs/fig_gamma_adjusted_means_by_cell.png)
 
-### Gamma log-link models
-- Models were fitted separately within selected homogeneous strata: Regular midfielders, Depth/Youth defenders, and Depth/Youth forwards.
-- Each model predicts positive `value_eur` using `nationality + age_z + potential_z + total_stats_z`; coefficients are reported as multiplicative value ratios and converted to percentages.
-- Depth/Youth defenders: China PR -20% versus the most common nationality in that stratum (95% CI -25% to -15%).
-- Depth/Youth defenders: Argentina +19% versus the most common nationality in that stratum (95% CI +12% to +26%).
-- Depth/Youth defenders: Spain +8% versus the most common nationality in that stratum (95% CI +2% to +14%).
-- Depth/Youth forwards: Spain +29% versus the most common nationality in that stratum (95% CI +19% to +39%).
-- Depth/Youth forwards: Italy +28% versus the most common nationality in that stratum (95% CI +17% to +40%).
-- Depth/Youth forwards: France +28% versus the most common nationality in that stratum (95% CI +18% to +38%).
-- Regular midfielders: Argentina -16% versus the most common nationality in that stratum (95% CI -24% to -8%).
-- Regular midfielders: Brazil +14% versus the most common nationality in that stratum (95% CI +4% to +25%).
-- Regular midfielders: France -10% versus the most common nationality in that stratum (95% CI -18% to -1%).
+![](figs/fig_top_pairwise_nationality_contrasts.png)
 
-![](figs/fig_gamma_nationality_coefficients_regular.png)
+Pooled controlled model, included as a robustness view rather than the main story:
+- Gamma(log) model n = 1,735; predictors: cell, nationality, age, potential, overall.
+- Brazil vs Spain: ratio 0.939 [0.916, 0.962], p < .001 (-6.1%).
+- Argentina vs Spain: ratio 0.958 [0.934, 0.984], p = 0.001 (-4.2%).
+- France vs Spain: ratio 0.970 [0.945, 0.995], p = 0.020 (-3.0%).
+- England vs Spain: ratio 0.974 [0.948, 1.001], p = 0.062 (-2.6%).
+- Germany vs Spain: ratio 0.978 [0.952, 1.006], p = 0.126 (-2.2%).
 
-![](figs/fig_gamma_covariate_coefficients.png)
+![](figs/fig_full_model_nationality_coefficients.png)
 
-## Diagnostics & robustness
-- All `glm()` fits have saved `performance::check_model()` diagnostic figures in `out/figs/`, satisfying the model-diagnostics requirement.
-- Collinearity check: maximum VIF across fitted Gamma models is 3.40. This is acceptable for poster-scale interpretation, though `Potential` and `TotalStats` are conceptually related.
-- Zero market values were removed before modeling rather than transformed with `log(value + 1)`, because boundary piles can distort residual structure.
-- The nonparametric tests and Gamma models agree on the broad pattern: nationality is associated with value within some local strata, but uncertainty remains wide for several specific nationalities.
+## Diagnostics & Robustness
+- Normality checks on log(value): 4 of 23 nationality-within-cell groups had Shapiro p < .05; group sizes ranged from 20 to 151. This supports avoiding a plain normal-error ANOVA as the primary analysis.
+- Levene tests on log(value) by nationality:
+- Midfield / Rotation 70-77: Levene p = 0.868.
+- Defender / Rotation 70-77: Levene p = 0.004.
+- Forward / Rotation 70-77: Levene p = 0.217.
+- Midfield / Starter 78-84: Levene p = 0.450.
+- Defender/Rotation 70-77 showed unequal log-scale variance, so the significant defender result should be read with the Gamma model and its diagnostics rather than as a classical equal-variance ANOVA result.
+- Collinearity in the pooled model was acceptable but not trivial:
+- cell: VIF 1.91.
+- nationality: VIF 1.16.
+- age: VIF 2.75.
+- potential: VIF 4.69.
+- overall: VIF 3.75.
+- Influence check in the pooled Gamma model flagged 0 observations by Cook/outlier criteria; diagnostics were saved for inspection.
 
-![](figs/fig_diag_gamma_regular_midfielders.png)
+Diagnostic figures saved:
+- `figs/fig_diagnostics_full_gamma_model.png`
+- `figs/fig_diagnostics_gamma_midfield_rotation_70_77.png`
+- `figs/fig_diagnostics_gamma_defender_rotation_70_77.png`
+- `figs/fig_diagnostics_gamma_forward_rotation_70_77.png`
+- `figs/fig_diagnostics_gamma_midfield_starter_78_84.png`
 
 ## Conclusions
-- In this FIFA 23 sample, specific nationalities show visible and statistically detectable market-value differences in several same-position, same-ability local strata.
-- These results are associations in a cross-sectional observational dataset. They do not show that nationality causes a player to be valued higher or lower.
-- A cautious poster wording would be: "Within selected position-ability strata, several nationalities have higher or lower observed market values after accounting for age, potential, and total stats."
+- In this FIFA 23 sample, nationality-value associations are not uniform. The clearest adjusted gaps appear in rotation-tier defenders and midfielders, where Brazilian players have higher estimated market values than several peer nationalities after controlling for age and potential.
+- The evidence is weaker in rotation-tier forwards and starter-tier midfielders; their confidence intervals overlap substantially and the nationality LR tests are not statistically strong.
+- These are cross-sectional observational associations. They should not be phrased as nationality causing higher or lower value. Unobserved club context, league exposure, contract details, scouting visibility, and transfer-market liquidity could confound the comparisons.
 
-Limitations: FIFA market value is an estimated game/database variable, not an observed transfer price. The models do not observe club negotiation context, league visibility, injury history, contract details beyond the available fields, or selection mechanisms behind who appears in the dataset.
-
-## Notes for the team
-- The README's goal mentions "nationality effects", but this analysis treats them as conditional associations because there is no randomization or causal identification strategy.
-- Broad nationality groupings would obscure the research question, so this analysis keeps specific nationalities and only filters for minimum sample size within strata.
-- Some figure subtitles are dense because AGENTS.md requires p-values and effect sizes directly on poster-ready figures.
-- The README file appears to have character-encoding damage in this environment, but the field names and intended analysis goal were still recoverable.
+## Notes for the Team
+- Poster-ready figures are in `out/figs/` at 300 dpi. The strongest candidates are `fig_gamma_adjusted_means_by_cell.png`, `fig_top_pairwise_nationality_contrasts.png`, and `fig_eda_value_by_nationality_cells.png`.
+- Do not describe this as a universal nationality premium. The pooled model shrinks average differences, while the cell-specific models show where the association is concentrated.
+- The README's suggested comparison of broad nationality categories was not followed literally because AGENTS.md warns against over-coarse nationality classification. This analysis compares concrete nationalities with adequate sample sizes.
+- Elite-tier cells are too small for credible nationality ranking in this dataset; avoid using star-player anecdotes as statistical evidence.
+- All `glm()` calls used for conclusions have accompanying diagnostic PNGs. The diagnostic plots are work products for checking model reliability, not necessarily poster figures.
